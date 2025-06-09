@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:teamup_web/aut/auth_service.dart';
+import '';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -34,12 +35,12 @@ class _LoginViewState extends State<LoginView> {
       if (isLogin) {
         await authService.singIn(email, password);
         // Navegar a pantalla principal después de login exitoso
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/VistaAdmin');
       } else {
         await authService.register(email, password);
         // Opcional: auto-login después de registro
         await authService.singIn(email, password);
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/VistaAdmin');
       }
     } catch (e) {
       ScaffoldMessenger.of(

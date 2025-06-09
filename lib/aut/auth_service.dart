@@ -11,6 +11,7 @@ class AuthService {
         email: email,
         password: password,
       );
+      print("inicio correctamente");
       return result.user;
     } catch (e, stacktrace) {
       print('Error de inicio de seccion $e');
