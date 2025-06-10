@@ -39,7 +39,7 @@ class AuthCheck extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasData) {
-          return VistaAdmi(); // Si hay sesión activa, carga HomePage
+          return VistaAdmin(); // Si hay sesión activa, carga HomePage
         } else {
           return LoginView(); // Si no hay sesión, carga LoginView
         }
