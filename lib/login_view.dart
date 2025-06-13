@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:teamup_web/aut/auth_service.dart';
-//import '';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -74,7 +73,7 @@ class _LoginViewState extends State<LoginView> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.network("https://placehold.co/361x361", width: 361),
+                      Image.asset("assets/logo.jpg", width: 361),
                       const SizedBox(height: 20),
                       Text(
                         'TeamUp',
@@ -120,6 +119,10 @@ class _LoginViewState extends State<LoginView> {
                           border: OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.emailAddress,
+                        onSubmitted: (value) {
+                          // Llama a handleAuth cuando se presiona Enter
+                          handleAuth();
+                        },
                       ),
                       const SizedBox(height: 20),
                       TextField(
@@ -130,6 +133,10 @@ class _LoginViewState extends State<LoginView> {
                           border: OutlineInputBorder(),
                           suffixIcon: Icon(Icons.visibility_off),
                         ),
+                        onSubmitted: (value) {
+                          // Llama a handleAuth cuando se presiona Enter
+                          handleAuth();
+                        },
                       ),
                       const SizedBox(height: 20),
                       Row(
