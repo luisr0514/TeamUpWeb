@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'manage_games_page.dart'; // Asegúrate de importar tus páginas
 import 'manage_fields_page.dart';
 import 'users_page.dart';
@@ -9,7 +10,7 @@ class Sidebar extends StatelessWidget {
   final VoidCallback onToggle; // Callback para alternar el estado
 
   const Sidebar({Key? key, required this.isExpanded, required this.onToggle})
-    : super(key: key);
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +25,7 @@ class Sidebar extends StatelessWidget {
           // Botón para alternar el menú
           IconButton(
             icon: Icon(
-              isExpanded
-                  ? Icons.arrow_back
-                  : Icons.arrow_forward, // Icono de flecha
+              isExpanded ? Icons.arrow_back : Icons.arrow_forward, // Icono de flecha
               color: const Color(0xFF10B981),
             ),
             onPressed: onToggle, // Llama al callback para alternar
