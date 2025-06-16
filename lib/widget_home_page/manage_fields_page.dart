@@ -141,6 +141,8 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
+          // Para depuración, es útil imprimir el error real
+          print(snapshot.error);
           return const Center(child: Text('Error al cargar canchas'));
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -207,8 +209,12 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
             Text('Tipo de cancha: ${fieldData['type'] ?? 'Sin tipo'}'),
             Text('Tipo de superficie: ${fieldData['surfaceType'] ?? 'Sin tipo superficie'}'),
             Text('Precio por hora: \$${(fieldData['pricePerHour'] ?? 0).toStringAsFixed(2)}'),
-            Text('Verificada: ${fieldData['isVerified'] ? "Sí" : "No"}'),
-            Text('Activa: ${fieldData['isActive'] ? "Sí" : "No"}'),
+
+            // ===== CORRECCIÓN APLICADA AQUÍ =====
+            Text('Verificada: ${(fieldData['isVerified'] ?? false) ? "Sí" : "No"}'),
+            Text('Activa: ${(fieldData['isActive'] ?? false) ? "Sí" : "No"}'),
+            // =====================================
+
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -232,118 +238,118 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
   }
 
 
- void _showAddFieldDialog(BuildContext context) {
-  final _formKey = GlobalKey<FormState>();
-  final controllers = {
-    // Campos originales
-    'ownerId': TextEditingController(),
-    'name': TextEditingController(),
-    'zone': TextEditingController(), // Original
-    'zoneId': TextEditingController(), // Nuevo
-    'lat': TextEditingController(),
-    'lng': TextEditingController(),
-    'duration': TextEditingController(),
-    'footwear': TextEditingController(),
-    'format': TextEditingController(),
-    'pricePerHour': TextEditingController(),
-    'photoUrl': TextEditingController(), // Original
-    'contact': TextEditingController(),
-    'description': TextEditingController(),
-    'discountPercentage': TextEditingController(),
-    'hasDiscount': TextEditingController(),
-    'availability': TextEditingController(),
-    'minPlayersToBook': TextEditingController(),
-    // Nuevos campos
-    'type': TextEditingController(),
-    'surfaceType': TextEditingController(),
-  };
+  void _showAddFieldDialog(BuildContext context) {
+    final _formKey = GlobalKey<FormState>();
+    final controllers = {
+      // Campos originales
+      'ownerId': TextEditingController(),
+      'name': TextEditingController(),
+      'zone': TextEditingController(), // Original
+      'zoneId': TextEditingController(), // Nuevo
+      'lat': TextEditingController(),
+      'lng': TextEditingController(),
+      'duration': TextEditingController(),
+      'footwear': TextEditingController(),
+      'format': TextEditingController(),
+      'pricePerHour': TextEditingController(),
+      'photoUrl': TextEditingController(), // Original
+      'contact': TextEditingController(),
+      'description': TextEditingController(),
+      'discountPercentage': TextEditingController(),
+      'hasDiscount': TextEditingController(),
+      'availability': TextEditingController(),
+      'minPlayersToBook': TextEditingController(),
+      // Nuevos campos
+      'type': TextEditingController(),
+      'surfaceType': TextEditingController(),
+    };
 
-  bool isVerified = false;
-  bool isActive = true;
+    bool isVerified = false;
+    bool isActive = true;
 
-  showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: const Text('Agregar nueva cancha'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...controllers.entries.map((entry) => _buildTextField(entry.key, entry.value)),
-                Row(
-                  children: [
-                    const Text('¿Verificada?'),
-                    Checkbox(
-                      value: isVerified,
-                      onChanged: (val) => setState(() => isVerified = val ?? false),
-                    ),
-                    const SizedBox(width: 16),
-                    const Text('¿Activa?'),
-                    Checkbox(
-                      value: isActive,
-                      onChanged: (val) => setState(() => isActive = val ?? true),
-                    ),
-                  ],
-                ),
-              ],
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Agregar nueva cancha'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...controllers.entries.map((entry) => _buildTextField(entry.key, entry.value)),
+                  Row(
+                    children: [
+                      const Text('¿Verificada?'),
+                      Checkbox(
+                        value: isVerified,
+                        onChanged: (val) => setState(() => isVerified = val ?? false),
+                      ),
+                      const SizedBox(width: 16),
+                      const Text('¿Activa?'),
+                      Checkbox(
+                        value: isActive,
+                        onChanged: (val) => setState(() => isActive = val ?? true),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                final newField = {
-                  'fieldId': '', // Se actualizará después
-                  // Campos originales
-                  'ownerId': controllers['ownerId']!.text.trim(),
-                  'name': controllers['name']!.text.trim(),
-                  'zone': controllers['zone']!.text.trim(),
-                  'zoneId': controllers['zoneId']!.text.trim(),
-                  'lat': double.parse(controllers['lat']!.text.trim()),
-                  'lng': double.parse(controllers['lng']!.text.trim()),
-                  'duration': int.parse(controllers['duration']!.text.trim()),
-                  'footwear': controllers['footwear']!.text.trim(),
-                  'format': controllers['format']!.text.trim(),
-                  'pricePerHour': double.parse(controllers['pricePerHour']!.text.trim()),
-                  'photoUrl': controllers['photoUrl']!.text.trim(),
-                  'contact': controllers['contact']!.text.trim(),
-                  'description': controllers['description']!.text.trim(),
-                  'discountPercentage': controllers['discountPercentage']!.text.trim(),
-                  'hasDiscount': controllers['hasDiscount']!.text.trim().toLowerCase() == 'true',
-                  'availability': controllers['availability']!.text.trim().isNotEmpty 
-                      ? controllers['availability']!.text.trim().split(',') 
-                      : [],
-                  'minPlayersToBook': int.parse(controllers['minPlayersToBook']!.text.trim()),
-                  // Nuevos campos
-                  'type': controllers['type']!.text.trim(),
-                  'surfaceType': controllers['surfaceType']!.text.trim(),
-                  // Checkboxes
-                  'isVerified': isVerified,
-                  'isActive': isActive,
-                  'createdAt': Timestamp.now(),
-                };
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState?.validate() ?? false) {
+                  final newField = {
+                    'fieldId': '', // Se actualizará después
+                    // Campos originales
+                    'ownerId': controllers['ownerId']!.text.trim(),
+                    'name': controllers['name']!.text.trim(),
+                    'zone': controllers['zone']!.text.trim(),
+                    'zoneId': controllers['zoneId']!.text.trim(),
+                    'lat': double.tryParse(controllers['lat']!.text.trim()) ?? 0.0,
+                    'lng': double.tryParse(controllers['lng']!.text.trim()) ?? 0.0,
+                    'duration': int.tryParse(controllers['duration']!.text.trim()) ?? 0,
+                    'footwear': controllers['footwear']!.text.trim(),
+                    'format': controllers['format']!.text.trim(),
+                    'pricePerHour': double.tryParse(controllers['pricePerHour']!.text.trim()) ?? 0.0,
+                    'photoUrl': controllers['photoUrl']!.text.trim(),
+                    'contact': controllers['contact']!.text.trim(),
+                    'description': controllers['description']!.text.trim(),
+                    'discountPercentage': controllers['discountPercentage']!.text.trim(),
+                    'hasDiscount': controllers['hasDiscount']!.text.trim().toLowerCase() == 'true',
+                    'availability': controllers['availability']!.text.trim().isNotEmpty
+                        ? controllers['availability']!.text.trim().split(',')
+                        : [],
+                    'minPlayersToBook': int.tryParse(controllers['minPlayersToBook']!.text.trim()) ?? 1,
+                    // Nuevos campos
+                    'type': controllers['type']!.text.trim(),
+                    'surfaceType': controllers['surfaceType']!.text.trim(),
+                    // Checkboxes
+                    'isVerified': isVerified,
+                    'isActive': isActive,
+                    'createdAt': Timestamp.now(),
+                  };
 
-                FirebaseFirestore.instance.collection('fields').add(newField)
-                  .then((docRef) => docRef.update({'fieldId': docRef.id}));
-                
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
+                  FirebaseFirestore.instance.collection('fields').add(newField)
+                      .then((docRef) => docRef.update({'fieldId': docRef.id}));
+
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Agregar'),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
   void _showEditFieldDialog(BuildContext context, Map<String, dynamic> fieldData, String docId) {
     final _formKey = GlobalKey<FormState>();
     final controllers = {
@@ -400,11 +406,11 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
                     'ownerId': controllers['ownerId']!.text.trim(),
                     'name': controllers['name']!.text.trim(),
                     'zoneId': controllers['zoneId']!.text.trim(),
-                    'lat': double.parse(controllers['lat']!.text.trim()),
-                    'lng': double.parse(controllers['lng']!.text.trim()),
+                    'lat': double.tryParse(controllers['lat']!.text.trim()) ?? 0.0,
+                    'lng': double.tryParse(controllers['lng']!.text.trim()) ?? 0.0,
                     'type': controllers['type']!.text.trim(),
                     'surfaceType': controllers['surfaceType']!.text.trim(),
-                    'pricePerHour': double.parse(controllers['pricePerHour']!.text.trim()),
+                    'pricePerHour': double.tryParse(controllers['pricePerHour']!.text.trim()) ?? 0.0,
                     'photoUrl': controllers['imageUrl']!.text.trim(),
                     'isVerified': isVerified,
                     'isActive': isActive,

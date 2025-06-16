@@ -1,11 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_file.dart';
 import 'package:teamup_web/firebase_options.dart';
 import 'package:teamup_web/login_view.dart';
-import 'package:provider/provider.dart';
-import 'home_page.dart';
+import 'package:teamup_web/home_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,12 +18,18 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // Opcional: quita el banner de debug
-      title: 'TeamUp', // Título de tu app
+      debugShowCheckedModeBanner: false,
+      title: 'TeamUp',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: AuthCheck(),
+      initialRoute: '/', //
+      routes: {
+        '/': (context) => AuthCheck(),
+        '/VistaAdmin': (context) => VistaAdmin(),
+        '/login': (context) => LoginView(),
+      },
+
     );
   }
 }
@@ -39,9 +43,9 @@ class AuthCheck extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasData) {
-          return VistaAdmin(); // Si hay sesión activa, carga HomePage
+          return VistaAdmin();
         } else {
-          return LoginView(); // Si no hay sesión, carga LoginView
+          return LoginView();
         }
       },
     );
