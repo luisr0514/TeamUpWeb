@@ -17,7 +17,7 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
     super.initState();
     _searchController.addListener(() {
       setState(() {
-        _searchText = _searchController.text;
+        _searchText = _searchController.text.toLowerCase();
       });
     });
   }
@@ -94,7 +94,7 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
         child: TextField(
           controller: _searchController,
           decoration: const InputDecoration(
-            hintText: 'Search fields...',
+            hintText: 'Buscar canchas...',
             border: InputBorder.none,
             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
@@ -119,7 +119,7 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
             Icon(Icons.add, color: Colors.white, size: 16),
             SizedBox(width: 8),
             Text(
-              'Agregar',
+              'Agregar cancha',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -147,19 +147,16 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
           return const Center(child: Text('No hay canchas registradas.'));
         }
 
-        final fields = snapshot.data!.docs;
-        final filteredFields = fields.where((field) {
-          final fieldData = field.data() as Map<String, dynamic>;
-          final name = fieldData['name']?.toString().toLowerCase() ?? '';
-          return name.contains(_searchText.toLowerCase());
+        final filteredFields = snapshot.data!.docs.where((field) {
+          final name = (field.data() as Map<String, dynamic>)['name']?.toString().toLowerCase() ?? '';
+          return name.contains(_searchText);
         }).toList();
 
         return ListView.builder(
           itemCount: filteredFields.length,
           itemBuilder: (context, index) {
             final fieldDoc = filteredFields[index];
-            final fieldData = fieldDoc.data() as Map<String, dynamic>;
-            return _buildFieldCard(fieldData, fieldDoc.id, context);
+            return _buildFieldCard(fieldDoc.data() as Map<String, dynamic>, fieldDoc.id, context);
           },
         );
       },
@@ -167,15 +164,6 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
   }
 
   Widget _buildFieldCard(Map<String, dynamic> fieldData, String docId, BuildContext context) {
-    final name = fieldData['name'] ?? 'Sin nombre';
-    final zone = fieldData['zone'] ?? 'Sin zona';
-    final type = fieldData['type'] ?? 'Sin tipo';
-    final surfaceType = fieldData['surfaceType'] ?? 'Sin tipo superficie';
-    final pricePerHour = (fieldData['pricePerHour'] != null) ? (fieldData['pricePerHour'] as num).toDouble() : 0.0;
-    final imageUrl = fieldData['photoUrl'] ?? '';
-    final isVerified = fieldData['isVerified'] ?? false;
-    final isActive = fieldData['isActive'] ?? false;
-
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       shape: RoundedRectangleBorder(
@@ -183,183 +171,192 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
         side: BorderSide(color: Colors.grey[200]!),
       ),
       child: ExpansionTile(
-        leading: imageUrl.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  imageUrl,
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 60,
-                    height: 60,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                  ),
-                ),
-              )
-            : Container(
-                width: 60,
-                height: 60,
-                color: Colors.grey[300],
-                child: const Icon(Icons.image_not_supported, color: Colors.grey),
-              ),
-        title: Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Zona: $zone'),
-                Text('Tipo de cancha: $type'),
-                Text('Tipo de superficie: $surfaceType'),
-                Text('Precio por hora: \$${pricePerHour.toStringAsFixed(2)}'),
-                Text('Verificada: ${isVerified ? "Sí" : "No"}'),
-                Text('Activa: ${isActive ? "Sí" : "No"}'),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => _showEditFieldDialog(context, fieldData, docId),
-                      child: const Text('EDITAR'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        FirebaseFirestore.instance.collection('fields').doc(docId).delete();
-                      },
-                      child: const Text('ELIMINAR', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          )
-        ],
+        leading: _buildFieldImage(fieldData['photoUrl']),
+        title: Text(fieldData['name'] ?? 'Sin nombre', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        children: _buildFieldDetails(fieldData, docId, context),
       ),
     );
   }
 
-  void _showAddFieldDialog(BuildContext context) {
-    final _formKey = GlobalKey<FormState>();
-    final ownerIdController = TextEditingController();
-    final nameController = TextEditingController();
-    final zoneController = TextEditingController();
-    final latController = TextEditingController();
-    final lngController = TextEditingController();
-    final typeController = TextEditingController();
-    final surfaceTypeController = TextEditingController();
-    final pricePerHourController = TextEditingController();
-    final imageUrlController = TextEditingController();
-    bool isVerified = false;
-    bool isActive = true;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Agregar nueva cancha'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildTextField('ID del propietario', ownerIdController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Nombre de la cancha', nameController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Zona', zoneController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Latitud', latController, keyboardType: TextInputType.number, validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    if (double.tryParse(v) == null) return 'Debe ser un número válido';
-                    return null;
-                  }),
-                  _buildTextField('Longitud', lngController, keyboardType: TextInputType.number, validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    if (double.tryParse(v) == null) return 'Debe ser un número válido';
-                    return null;
-                  }),
-                  _buildTextField('Tipo de cancha', typeController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Tipo de superficie', surfaceTypeController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Precio por hora', pricePerHourController, keyboardType: TextInputType.number, validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    if (double.tryParse(v) == null) return 'Debe ser un número válido';
-                    return null;
-                  }),
-                  _buildTextField('URL de la imagen', imageUrlController),
-                  Row(
-                    children: [
-                      const Text('¿Verificada?'),
-                      Checkbox(
-                        value: isVerified,
-                        onChanged: (val) {
-                          setState(() {
-                            isVerified = val ?? false;
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      const Text('¿Activa?'),
-                      Checkbox(
-                        value: isActive,
-                        onChanged: (val) {
-                          setState(() {
-                            isActive = val ?? true;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-            ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState?.validate() ?? false) {
-                  final newField = {
-                    'ownerId': ownerIdController.text.trim(),
-                    'name': nameController.text.trim(),
-                    'zone': zoneController.text.trim(),
-                    'lat': double.parse(latController.text.trim()),
-                    'lng': double.parse(lngController.text.trim()),
-                    'type': typeController.text.trim(),
-                    'surfaceType': surfaceTypeController.text.trim(),
-                    'pricePerHour': double.parse(pricePerHourController.text.trim()),
-                    'photoUrl': imageUrlController.text.trim(),
-                    'isVerified': isVerified,
-                    'isActive': isActive,
-                    'createdAt': Timestamp.now(),
-                    'availability': {},
-                  };
-
-                  FirebaseFirestore.instance.collection('fields').add(newField);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Agregar'),
-            ),
-          ],
+  Widget _buildFieldImage(String? imageUrl) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        imageUrl ?? '',
+        width: 60,
+        height: 60,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: 60,
+          height: 60,
+          color: Colors.grey[300],
+          child: const Icon(Icons.broken_image, color: Colors.grey),
         ),
       ),
     );
   }
 
+  List<Widget> _buildFieldDetails(Map<String, dynamic> fieldData, String docId, BuildContext context) {
+    return [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Zona: ${fieldData['zone'] ?? 'Sin zona'}'),
+            Text('Tipo de cancha: ${fieldData['type'] ?? 'Sin tipo'}'),
+            Text('Tipo de superficie: ${fieldData['surfaceType'] ?? 'Sin tipo superficie'}'),
+            Text('Precio por hora: \$${(fieldData['pricePerHour'] ?? 0).toStringAsFixed(2)}'),
+            Text('Verificada: ${fieldData['isVerified'] ? "Sí" : "No"}'),
+            Text('Activa: ${fieldData['isActive'] ? "Sí" : "No"}'),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => _showEditFieldDialog(context, fieldData, docId),
+                  child: const Text('EDITAR'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    FirebaseFirestore.instance.collection('fields').doc(docId).delete();
+                  },
+                  child: const Text('ELIMINAR', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+
+ void _showAddFieldDialog(BuildContext context) {
+  final _formKey = GlobalKey<FormState>();
+  final controllers = {
+    // Campos originales
+    'ownerId': TextEditingController(),
+    'name': TextEditingController(),
+    'zone': TextEditingController(), // Original
+    'zoneId': TextEditingController(), // Nuevo
+    'lat': TextEditingController(),
+    'lng': TextEditingController(),
+    'duration': TextEditingController(),
+    'footwear': TextEditingController(),
+    'format': TextEditingController(),
+    'pricePerHour': TextEditingController(),
+    'photoUrl': TextEditingController(), // Original
+    'contact': TextEditingController(),
+    'description': TextEditingController(),
+    'discountPercentage': TextEditingController(),
+    'hasDiscount': TextEditingController(),
+    'availability': TextEditingController(),
+    'minPlayersToBook': TextEditingController(),
+    // Nuevos campos
+    'type': TextEditingController(),
+    'surfaceType': TextEditingController(),
+  };
+
+  bool isVerified = false;
+  bool isActive = true;
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Agregar nueva cancha'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...controllers.entries.map((entry) => _buildTextField(entry.key, entry.value)),
+                Row(
+                  children: [
+                    const Text('¿Verificada?'),
+                    Checkbox(
+                      value: isVerified,
+                      onChanged: (val) => setState(() => isVerified = val ?? false),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text('¿Activa?'),
+                    Checkbox(
+                      value: isActive,
+                      onChanged: (val) => setState(() => isActive = val ?? true),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_formKey.currentState?.validate() ?? false) {
+                final newField = {
+                  'fieldId': '', // Se actualizará después
+                  // Campos originales
+                  'ownerId': controllers['ownerId']!.text.trim(),
+                  'name': controllers['name']!.text.trim(),
+                  'zone': controllers['zone']!.text.trim(),
+                  'zoneId': controllers['zoneId']!.text.trim(),
+                  'lat': double.parse(controllers['lat']!.text.trim()),
+                  'lng': double.parse(controllers['lng']!.text.trim()),
+                  'duration': int.parse(controllers['duration']!.text.trim()),
+                  'footwear': controllers['footwear']!.text.trim(),
+                  'format': controllers['format']!.text.trim(),
+                  'pricePerHour': double.parse(controllers['pricePerHour']!.text.trim()),
+                  'photoUrl': controllers['photoUrl']!.text.trim(),
+                  'contact': controllers['contact']!.text.trim(),
+                  'description': controllers['description']!.text.trim(),
+                  'discountPercentage': controllers['discountPercentage']!.text.trim(),
+                  'hasDiscount': controllers['hasDiscount']!.text.trim().toLowerCase() == 'true',
+                  'availability': controllers['availability']!.text.trim().isNotEmpty 
+                      ? controllers['availability']!.text.trim().split(',') 
+                      : [],
+                  'minPlayersToBook': int.parse(controllers['minPlayersToBook']!.text.trim()),
+                  // Nuevos campos
+                  'type': controllers['type']!.text.trim(),
+                  'surfaceType': controllers['surfaceType']!.text.trim(),
+                  // Checkboxes
+                  'isVerified': isVerified,
+                  'isActive': isActive,
+                  'createdAt': Timestamp.now(),
+                };
+
+                FirebaseFirestore.instance.collection('fields').add(newField)
+                  .then((docRef) => docRef.update({'fieldId': docRef.id}));
+                
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   void _showEditFieldDialog(BuildContext context, Map<String, dynamic> fieldData, String docId) {
     final _formKey = GlobalKey<FormState>();
-
-    final ownerIdController = TextEditingController(text: fieldData['ownerId'] ?? '');
-    final nameController = TextEditingController(text: fieldData['name'] ?? '');
-    final zoneController = TextEditingController(text: fieldData['zone'] ?? '');
-    final latController = TextEditingController(text: fieldData['lat']?.toString() ?? '');
-    final lngController = TextEditingController(text: fieldData['lng']?.toString() ?? '');
-    final typeController = TextEditingController(text: fieldData['type'] ?? '');
-    final surfaceTypeController = TextEditingController(text: fieldData['surfaceType'] ?? '');
-    final pricePerHourController = TextEditingController(text: fieldData['pricePerHour']?.toString() ?? '');
-    final imageUrlController = TextEditingController(text: fieldData['photoUrl'] ?? '');
+    final controllers = {
+      'ownerId': TextEditingController(text: fieldData['ownerId']),
+      'name': TextEditingController(text: fieldData['name']),
+      'zoneId': TextEditingController(text: fieldData['zoneId']),
+      'lat': TextEditingController(text: fieldData['lat']?.toString()),
+      'lng': TextEditingController(text: fieldData['lng']?.toString()),
+      'type': TextEditingController(text: fieldData['type']),
+      'surfaceType': TextEditingController(text: fieldData['surfaceType']),
+      'pricePerHour': TextEditingController(text: fieldData['pricePerHour']?.toString()),
+      'imageUrl': TextEditingController(text: fieldData['photoUrl']),
+    };
     bool isVerified = fieldData['isVerified'] ?? false;
     bool isActive = fieldData['isActive'] ?? false;
 
@@ -374,47 +371,19 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildTextField('ID del propietario', ownerIdController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Nombre de la cancha', nameController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Zona', zoneController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Latitud', latController, keyboardType: TextInputType.number, validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    if (double.tryParse(v) == null) return 'Debe ser un número válido';
-                    return null;
-                  }),
-                  _buildTextField('Longitud', lngController, keyboardType: TextInputType.number, validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    if (double.tryParse(v) == null) return 'Debe ser un número válido';
-                    return null;
-                  }),
-                  _buildTextField('Tipo de cancha', typeController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Tipo de superficie', surfaceTypeController, validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                  _buildTextField('Precio por hora', pricePerHourController, keyboardType: TextInputType.number, validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    if (double.tryParse(v) == null) return 'Debe ser un número válido';
-                    return null;
-                  }),
-                  _buildTextField('URL de la imagen', imageUrlController),
+                  ...controllers.entries.map((entry) => _buildTextField(entry.key, entry.value)),
                   Row(
                     children: [
                       const Text('¿Verificada?'),
                       Checkbox(
                         value: isVerified,
-                        onChanged: (val) {
-                          setState(() {
-                            isVerified = val ?? false;
-                          });
-                        },
+                        onChanged: (val) => setState(() => isVerified = val ?? false),
                       ),
                       const SizedBox(width: 16),
                       const Text('¿Activa?'),
                       Checkbox(
                         value: isActive,
-                        onChanged: (val) {
-                          setState(() {
-                            isActive = val ?? false;
-                          });
-                        },
+                        onChanged: (val) => setState(() => isActive = val ?? false),
                       ),
                     ],
                   ),
@@ -428,15 +397,15 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
               onPressed: () async {
                 if (_formKey.currentState?.validate() ?? false) {
                   final updatedField = {
-                    'ownerId': ownerIdController.text.trim(),
-                    'name': nameController.text.trim(),
-                    'zone': zoneController.text.trim(),
-                    'lat': double.parse(latController.text.trim()),
-                    'lng': double.parse(lngController.text.trim()),
-                    'type': typeController.text.trim(),
-                    'surfaceType': surfaceTypeController.text.trim(),
-                    'pricePerHour': double.parse(pricePerHourController.text.trim()),
-                    'photoUrl': imageUrlController.text.trim(),
+                    'ownerId': controllers['ownerId']!.text.trim(),
+                    'name': controllers['name']!.text.trim(),
+                    'zoneId': controllers['zoneId']!.text.trim(),
+                    'lat': double.parse(controllers['lat']!.text.trim()),
+                    'lng': double.parse(controllers['lng']!.text.trim()),
+                    'type': controllers['type']!.text.trim(),
+                    'surfaceType': controllers['surfaceType']!.text.trim(),
+                    'pricePerHour': double.parse(controllers['pricePerHour']!.text.trim()),
+                    'photoUrl': controllers['imageUrl']!.text.trim(),
                     'isVerified': isVerified,
                     'isActive': isActive,
                     'updatedAt': Timestamp.now(),
@@ -454,15 +423,13 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {TextInputType keyboardType = TextInputType.text, String? Function(String?)? validator}) {
+  Widget _buildTextField(String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
         controller: controller,
-        keyboardType: keyboardType,
         decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-        validator: validator,
+        validator: (value) => (value == null || value.isEmpty) ? 'Requerido' : null,
       ),
     );
   }
