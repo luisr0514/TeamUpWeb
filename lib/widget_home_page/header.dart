@@ -1,4 +1,3 @@
-// header.dart
 import 'package:flutter/material.dart';
 import '../aut/auth_service.dart';
 
@@ -16,7 +15,7 @@ class Header extends StatelessWidget {
       child: Row(
         children: [
           const Text(
-            'Manage Games',
+            'TeamUp',
             style: TextStyle(
               color: Color(0xFF111827),
               fontSize: 24,
@@ -25,30 +24,6 @@ class Header extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Container(
-            width: 268,
-            height: 41,
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Padding(
-              padding: EdgeInsets.only(left: 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Search...',
-                  style: TextStyle(
-                    color: Color(0xFF999999),
-                    fontSize: 16,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 32),
           const CircleAvatar(
             radius: 20,
             backgroundImage: NetworkImage("https://placehold.co/40x40"),
@@ -78,17 +53,13 @@ class Header extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(width: 24),
-
           // --- Botón Salir: Ubicación para agregar lógica de salida ---
           TextButton(
             onPressed: () async {
               await AuthService().singOut();
               // Agregar lógica de salida aquí
             },
-
-            // Aquí puedes agregar la lógica pertinente para salir/cerrar sesión
             style: TextButton.styleFrom(
               backgroundColor: const Color(0xFF10B981),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

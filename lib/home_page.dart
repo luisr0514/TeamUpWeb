@@ -1,195 +1,51 @@
 import 'package:flutter/material.dart';
-
 import 'widget_home_page/sidebar.dart';
 import 'widget_home_page/header.dart';
+import 'widget_home_page/manage_games_page.dart';
+import 'widget_home_page/manage_fields_page.dart';
+import 'widget_home_page/users_page.dart';
+import 'widget_home_page/settings_page.dart';
 import 'widget_home_page/table.dart';
 
 class VistaAdmin extends StatefulWidget {
+  const VistaAdmin({Key? key}) : super(key: key);
+
   @override
   _VistaAdminState createState() => _VistaAdminState();
 }
 
 class _VistaAdminState extends State<VistaAdmin> {
-  bool isSidebarExpanded = true; // Estado del sidebar
+  bool _isSidebarExpanded = true;
+  Widget _currentPage = const Center(
+    child: Text('Contenido del Dashboard (¡Bienvenido!)',
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+  );
+
+  void _onToggleSidebar() => setState(() => _isSidebarExpanded = !_isSidebarExpanded);
+
+  // Cambia la página actual que se muestra
+  void _onMenuItemSelected(Widget page) {
+    setState(() {
+      _currentPage = page;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       body: Row(
         children: [
-          // Sidebar
           Sidebar(
-            isExpanded: isSidebarExpanded,
-            onToggle: () {
-              setState(() {
-                isSidebarExpanded = !isSidebarExpanded; // Alternar estado
-              });
-            },
+            isExpanded: _isSidebarExpanded,
+            onToggle: _onToggleSidebar,
+            onItemSelected: _onMenuItemSelected,
           ),
-
-          // Main content area
           Expanded(
-            child: Container(
-              height: screenHeight,
-              color: const Color(0xFFF9FAFB),
-              child: Column(
-                children: [
-                  // Header
-                  Header(),
-
-                  // Sub-header
-                  Container(
-                    height: 59,
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          width: 0.67,
-                          color: Color(0xFFE5E7EB),
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 53,
-                          height: 58,
-                          margin: const EdgeInsets.only(left: 32),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                width: 2,
-                                color: Color(0xFF10B981),
-                              ),
-                            ),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Games',
-                              style: TextStyle(
-                                color: Color(0xFF10B981),
-                                fontSize: 16,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 32),
-                        const Text(
-                          'Fields',
-                          style: TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontSize: 16,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Content
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        children: [
-                          // Filtros
-                          Row(
-                            children: [
-                              Container(
-                                width: 133,
-                                height: 41,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFD9D9D9),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'All Status',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 16,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Container(
-                                width: 174,
-                                height: 41,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: const Color(0xFFE5E7EB),
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                width: 120,
-                                height: 41,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: const Color(0xFFE5E7EB),
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'Export CSV',
-                                    style: TextStyle(
-                                      color: Color(0xFF6B7280),
-                                      fontSize: 16,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Container(
-                                width: 151,
-                                height: 41,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Add Game',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          TableWidget(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: Column(
+              children: [
+                Header(),
+                Expanded(child: _currentPage),
+              ],
             ),
           ),
         ],
@@ -197,3 +53,82 @@ class _VistaAdminState extends State<VistaAdmin> {
     );
   }
 }
+
+// Sidebar actualizado para aceptar ValueChanged<Widget> y manejar páginas sin índices
+class Sidebar extends StatelessWidget {
+  final bool isExpanded;
+  final VoidCallback onToggle;
+  final ValueChanged<Widget> onItemSelected;
+
+  const Sidebar({
+    Key? key,
+    required this.isExpanded,
+    required this.onToggle,
+    required this.onItemSelected,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final menuItems = {
+      'Dashboard': const Center(
+          child: Text('Contenido del Dashboard (¡Bienvenido!)',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+      'Juegos': ManageGamesPage(),
+      'Canchas': ManageFieldsPage(),
+      'Usuarios': UsersPage(),
+      'Ajustes': SettingsPage(),
+    };
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: isExpanded ? 240 : 60,
+      height: MediaQuery.of(context).size.height,
+      color: const Color(0xFFDFFF4F),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconButton(
+            icon: Icon(isExpanded ? Icons.arrow_back : Icons.arrow_forward,
+                color: const Color(0xFF10B981)),
+            onPressed: onToggle,
+          ),
+          if (isExpanded) ...[
+            const Padding(
+              padding: EdgeInsets.only(left: 24, bottom: 16),
+              child: Text('Admin Dashboard',
+                  style:
+                      TextStyle(color: Color(0xFF10B981), fontSize: 14, fontWeight: FontWeight.w400)),
+            ),
+            for (var title in menuItems.keys)
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                    onTap: () => onItemSelected(menuItems[title]!),
+                    child: Container(
+                      width: isExpanded ? 208 : 48,
+                      height: 48,
+                      margin: const EdgeInsets.only(left: 16, top: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 16),
+                          if (isExpanded)
+                            Text(title,
+                                style: const TextStyle(
+                                    color: Color(0xFF9CA3AF),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    )),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+

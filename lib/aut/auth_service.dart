@@ -37,5 +37,30 @@ class AuthService {
   Future<void> singOut() async {
     await _auth.signOut();
   }
+  
+  
+ /// Envía un correo para restablecer la contraseña al email indicado.
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message ?? 'Error al enviar correo de restablecimiento');
+    }
+  }
+
+  /// Opcional: método que actualiza contraseña (requiere usuario autenticado)
+  Future<void> updatePassword(String email, String newPassword) async {
+    User? user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('No hay usuario autenticado');
+    }
+
+    if (user.email != email) {
+      throw Exception('El correo electrónico no coincide con el usuario autenticado');
+    }
+
+    await user.updatePassword(newPassword);
+  }
 }
 

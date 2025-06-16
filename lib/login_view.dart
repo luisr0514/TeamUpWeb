@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teamup_web/aut/auth_service.dart';
+
+import 'reset_password_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -14,6 +17,26 @@ class _LoginViewState extends State<LoginView> {
   bool isLogin = true;
   bool isLoading = false;
   bool rememberMe = false;
+  bool isPasswordVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCredentials();
+  }
+
+  Future<void> _loadCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? email = prefs.getString('email');
+    String? password = prefs.getString('password');
+    bool? remember = prefs.getBool('rememberMe');
+
+    if (remember == true) {
+      emailController.text = email ?? '';
+      passwordController.text = password ?? '';
+      rememberMe = true;
+    }
+  }
 
   Future<void> handleAuth() async {
     final email = emailController.text;
@@ -33,21 +56,41 @@ class _LoginViewState extends State<LoginView> {
 
       if (isLogin) {
         await authService.singIn(email, password);
-        // Navegar a pantalla principal después de login exitoso
+        if (rememberMe) {
+          _saveCredentials(email, password);
+        } else {
+          _clearCredentials();
+        }
         Navigator.pushReplacementNamed(context, '/VistaAdmin');
       } else {
         await authService.register(email, password);
-        // Opcional: auto-login después de registro
         await authService.singIn(email, password);
+        if (rememberMe) {
+          _saveCredentials(email, password);
+        } else {
+          _clearCredentials();
+        }
         Navigator.pushReplacementNamed(context, '/VistaAdmin');
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
       setState(() => isLoading = false);
     }
+  }
+
+  Future<void> _saveCredentials(String email, String password) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('email', email);
+    await prefs.setString('password', password);
+    await prefs.setBool('rememberMe', true);
+  }
+
+  Future<void> _clearCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('email');
+    await prefs.remove('password');
+    await prefs.setBool('rememberMe', false);
   }
 
   void toggleAuthMode() {
@@ -108,7 +151,7 @@ class _LoginViewState extends State<LoginView> {
                       const SizedBox(height: 10),
                       Text(
                         isLogin
-                            ? 'Enter your credentials to access the dashboard'
+                            ? 'Enter your credentials to access'
                             : 'Create a new admin account',
                       ),
                       const SizedBox(height: 30),
@@ -120,21 +163,30 @@ class _LoginViewState extends State<LoginView> {
                         ),
                         keyboardType: TextInputType.emailAddress,
                         onSubmitted: (value) {
-                          // Llama a handleAuth cuando se presiona Enter
                           handleAuth();
                         },
                       ),
                       const SizedBox(height: 20),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: !isPasswordVisible,
+                        decoration: InputDecoration(
                           labelText: 'Password',
-                          border: OutlineInputBorder(),
-                          suffixIcon: Icon(Icons.visibility_off),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                isPasswordVisible = !isPasswordVisible;
+                              });
+                            },
+                          ),
                         ),
                         onSubmitted: (value) {
-                          // Llama a handleAuth cuando se presiona Enter
                           handleAuth();
                         },
                       ),
@@ -150,9 +202,14 @@ class _LoginViewState extends State<LoginView> {
                           const Text('Remember me'),
                           const Spacer(),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ResetPasswordView()),
+                              );
+                            },
                             child: const Text('Forgot password?'),
-                          ),
+                              ),
                         ],
                       ),
                       const SizedBox(height: 20),

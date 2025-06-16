@@ -18,7 +18,7 @@ class Sidebar extends StatelessWidget {
       duration: const Duration(milliseconds: 300), // Duración de la animación
       width: isExpanded ? 240 : 60, // Ancho del menú
       height: MediaQuery.of(context).size.height,
-      color: const Color(0xFFDFFF4F),
+      color: const Color.fromARGB(255, 178, 206, 55),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

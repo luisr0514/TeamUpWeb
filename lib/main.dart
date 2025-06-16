@@ -13,7 +13,7 @@ Future<void> main() async {
   runApp(const MainApp());
 }
 
-//hola
+
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
@@ -23,7 +23,7 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false, // Opcional: quita el banner de debug
       title: 'TeamUp', // Título de tu app
       theme: ThemeData(
-        primarySwatch: Colors.blue, // Puedes personalizar tu tema aquí
+        primarySwatch: Colors.blue,
       ),
       home: AuthCheck(),
     );
