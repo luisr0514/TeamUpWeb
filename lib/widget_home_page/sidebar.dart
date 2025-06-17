@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'manage_games_page.dart'; // Asegúrate de importar tus páginas
-import 'manage_fields_page.dart';
+import 'manage_fields/manage_fields_page.dart';
 import 'users_page.dart';
 import 'settings_page.dart';
 

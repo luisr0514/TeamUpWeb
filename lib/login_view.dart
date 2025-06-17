@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:teamup_web/aut/auth_service.dart';
+import 'package:teamup_web/auth/auth_service.dart';
 
 import 'reset_password_view.dart';
 
