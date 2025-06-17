@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ManageFieldsPage extends StatefulWidget {
   const ManageFieldsPage({Key? key}) : super(key: key);
@@ -11,15 +12,26 @@ class ManageFieldsPage extends StatefulWidget {
 class _ManageFieldsPageState extends State<ManageFieldsPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = '';
+  String _currentUserId = '';
 
   @override
   void initState() {
     super.initState();
+    _getCurrentUserId();
     _searchController.addListener(() {
       setState(() {
         _searchText = _searchController.text.toLowerCase();
       });
     });
+  }
+
+  void _getCurrentUserId() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _currentUserId = user.uid;
+      });
+    }
   }
 
   @override
@@ -134,6 +146,10 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
   }
 
   Widget _buildFieldsList() {
+    if (_currentUserId.isEmpty) {
+      return const Center(child: Text('Cargando información del usuario...'));
+    }
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('fields').snapshots(),
       builder: (context, snapshot) {
@@ -141,7 +157,6 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          // Para depuración, es útil imprimir el error real
           print(snapshot.error);
           return const Center(child: Text('Error al cargar canchas'));
         }
@@ -150,9 +165,15 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
         }
 
         final filteredFields = snapshot.data!.docs.where((field) {
-          final name = (field.data() as Map<String, dynamic>)['name']?.toString().toLowerCase() ?? '';
-          return name.contains(_searchText);
+          final data = field.data() as Map<String, dynamic>;
+          final ownerId = data['ownerId']?.toString() ?? '';
+          final name = data['name']?.toString().toLowerCase() ?? '';
+          return ownerId == _currentUserId && name.contains(_searchText);
         }).toList();
+
+        if (filteredFields.isEmpty) {
+          return const Center(child: Text('No se encontraron canchas'));
+        }
 
         return ListView.builder(
           itemCount: filteredFields.length,
@@ -209,12 +230,8 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
             Text('Tipo de cancha: ${fieldData['type'] ?? 'Sin tipo'}'),
             Text('Tipo de superficie: ${fieldData['surfaceType'] ?? 'Sin tipo superficie'}'),
             Text('Precio por hora: \$${(fieldData['pricePerHour'] ?? 0).toStringAsFixed(2)}'),
-
-            // ===== CORRECCIÓN APLICADA AQUÍ =====
             Text('Verificada: ${(fieldData['isVerified'] ?? false) ? "Sí" : "No"}'),
             Text('Activa: ${(fieldData['isActive'] ?? false) ? "Sí" : "No"}'),
-            // =====================================
-
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -225,7 +242,13 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
                 ),
                 TextButton(
                   onPressed: () {
-                    FirebaseFirestore.instance.collection('fields').doc(docId).delete();
+                    if (fieldData['ownerId'] == _currentUserId) {
+                      FirebaseFirestore.instance.collection('fields').doc(docId).delete();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('No tienes permiso para eliminar esta cancha')),
+                      );
+                    }
                   },
                   child: const Text('ELIMINAR', style: TextStyle(color: Colors.red)),
                 ),
@@ -237,29 +260,25 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
     ];
   }
 
-
   void _showAddFieldDialog(BuildContext context) {
     final _formKey = GlobalKey<FormState>();
     final controllers = {
-      // Campos originales
-      'ownerId': TextEditingController(),
       'name': TextEditingController(),
-      'zone': TextEditingController(), // Original
-      'zoneId': TextEditingController(), // Nuevo
+      'zone': TextEditingController(),
+      'zoneId': TextEditingController(),
       'lat': TextEditingController(),
       'lng': TextEditingController(),
       'duration': TextEditingController(),
       'footwear': TextEditingController(),
       'format': TextEditingController(),
       'pricePerHour': TextEditingController(),
-      'photoUrl': TextEditingController(), // Original
+      'photoUrl': TextEditingController(),
       'contact': TextEditingController(),
       'description': TextEditingController(),
       'discountPercentage': TextEditingController(),
       'hasDiscount': TextEditingController(),
       'availability': TextEditingController(),
       'minPlayersToBook': TextEditingController(),
-      // Nuevos campos
       'type': TextEditingController(),
       'surfaceType': TextEditingController(),
     };
@@ -307,9 +326,7 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
               onPressed: () {
                 if (_formKey.currentState?.validate() ?? false) {
                   final newField = {
-                    'fieldId': '', // Se actualizará después
-                    // Campos originales
-                    'ownerId': controllers['ownerId']!.text.trim(),
+                    'ownerId': _currentUserId,
                     'name': controllers['name']!.text.trim(),
                     'zone': controllers['zone']!.text.trim(),
                     'zoneId': controllers['zoneId']!.text.trim(),
@@ -328,10 +345,8 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
                         ? controllers['availability']!.text.trim().split(',')
                         : [],
                     'minPlayersToBook': int.tryParse(controllers['minPlayersToBook']!.text.trim()) ?? 1,
-                    // Nuevos campos
                     'type': controllers['type']!.text.trim(),
                     'surfaceType': controllers['surfaceType']!.text.trim(),
-                    // Checkboxes
                     'isVerified': isVerified,
                     'isActive': isActive,
                     'createdAt': Timestamp.now(),
@@ -350,10 +365,17 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
       ),
     );
   }
+
   void _showEditFieldDialog(BuildContext context, Map<String, dynamic> fieldData, String docId) {
+    if (fieldData['ownerId'] != _currentUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No tienes permiso para editar esta cancha')),
+      );
+      return;
+    }
+
     final _formKey = GlobalKey<FormState>();
     final controllers = {
-      'ownerId': TextEditingController(text: fieldData['ownerId']),
       'name': TextEditingController(text: fieldData['name']),
       'zoneId': TextEditingController(text: fieldData['zoneId']),
       'lat': TextEditingController(text: fieldData['lat']?.toString()),
@@ -403,7 +425,6 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
               onPressed: () async {
                 if (_formKey.currentState?.validate() ?? false) {
                   final updatedField = {
-                    'ownerId': controllers['ownerId']!.text.trim(),
                     'name': controllers['name']!.text.trim(),
                     'zoneId': controllers['zoneId']!.text.trim(),
                     'lat': double.tryParse(controllers['lat']!.text.trim()) ?? 0.0,
