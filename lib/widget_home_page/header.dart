@@ -57,7 +57,7 @@ class Header extends StatelessWidget {
           // --- Botón Salir: Ubicación para agregar lógica de salida ---
           TextButton(
             onPressed: () async {
-              await AuthService().singOut();
+              await AuthService().signOut();
               // Agregar lógica de salida aquí
             },
             style: TextButton.styleFrom(

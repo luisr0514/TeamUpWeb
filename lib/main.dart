@@ -11,7 +11,6 @@ Future<void> main() async {
   runApp(const MainApp());
 }
 
-
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
@@ -20,16 +19,8 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'TeamUp',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      initialRoute: '/', //
-      routes: {
-        '/': (context) => AuthCheck(),
-        '/VistaAdmin': (context) => VistaAdmin(),
-        '/login': (context) => LoginView(),
-      },
-
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: AuthCheck(),
     );
   }
 }

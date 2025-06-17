@@ -11,7 +11,7 @@ class AuthService {
         email: email,
         password: password,
       );
-      print("inicio correctamente");
+      print("Inicio de sesión correctamente: ${result.user?.email}");
       return result.user;
     } catch (e, stacktrace) {
       print('Error de inicio de seccion $e');
@@ -34,17 +34,19 @@ class AuthService {
     }
   }
 
-  Future<void> singOut() async {
+  Future<void> signOut() async {
     await _auth.signOut();
+    print("Usuario desconectado correctamente: ${_auth.currentUser?.email}");
   }
-  
-  
- /// Envía un correo para restablecer la contraseña al email indicado.
+
+  /// Envía un correo para restablecer la contraseña al email indicado.
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
     } on FirebaseAuthException catch (e) {
-      throw Exception(e.message ?? 'Error al enviar correo de restablecimiento');
+      throw Exception(
+        e.message ?? 'Error al enviar correo de restablecimiento',
+      );
     }
   }
 
@@ -57,10 +59,11 @@ class AuthService {
     }
 
     if (user.email != email) {
-      throw Exception('El correo electrónico no coincide con el usuario autenticado');
+      throw Exception(
+        'El correo electrónico no coincide con el usuario autenticado',
+      );
     }
 
     await user.updatePassword(newPassword);
   }
 }
-
