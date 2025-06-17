@@ -35,7 +35,6 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
   void _showAddFieldDialog() {
     showDialog(
       context: context,
-      // Usamos nuestro widget de formulario especializado.
       builder: (context) => const FieldFormDialog(),
     );
   }
