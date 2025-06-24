@@ -1,3 +1,4 @@
+// game_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GameModel {
@@ -20,6 +21,10 @@ class GameModel {
   final String type;
   final String format;
   final String footwear;
+
+  /// Coordenadas de la cancha (lat/lng) para filtros de distancia
+  final GeoPoint? location;
+
   final String status;
   final int minPlayersToConfirm;
   final String? privateCode;
@@ -47,6 +52,7 @@ class GameModel {
     required this.type,
     required this.format,
     required this.footwear,
+    this.location,
     required this.status,
     required this.minPlayersToConfirm,
     this.privateCode,
@@ -82,6 +88,7 @@ class GameModel {
       type: map['type'] ?? '',
       format: map['format'] ?? '7v7',
       footwear: map['footwear'] ?? 'any',
+      location: map['location'] as GeoPoint?,
       status: map['status'] ?? 'waiting',
       minPlayersToConfirm: map['minPlayersToConfirm'] ?? 0,
       privateCode: map['privateCode'],
@@ -112,6 +119,7 @@ class GameModel {
       'type': type,
       'format': format,
       'footwear': footwear,
+      'location': location,
       'status': status,
       'minPlayersToConfirm': minPlayersToConfirm,
       'privateCode': privateCode,
@@ -141,6 +149,7 @@ class GameModel {
     String? type,
     String? format,
     String? footwear,
+    GeoPoint? location,
     String? status,
     int? minPlayersToConfirm,
     String? privateCode,
@@ -168,6 +177,7 @@ class GameModel {
       type: type ?? this.type,
       format: format ?? this.format,
       footwear: footwear ?? this.footwear,
+      location: location ?? this.location,
       status: status ?? this.status,
       minPlayersToConfirm: minPlayersToConfirm ?? this.minPlayersToConfirm,
       privateCode: privateCode ?? this.privateCode,

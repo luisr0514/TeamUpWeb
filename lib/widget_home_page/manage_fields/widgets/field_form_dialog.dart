@@ -1,6 +1,10 @@
+// lib/features/manage_fields/field_form_dialog.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // <-- 1. IMPORTA FIREBASE AUTH
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'form_validators.dart';
 
 class FieldFormDialog extends StatefulWidget {
@@ -22,9 +26,6 @@ class FieldFormDialog extends StatefulWidget {
 class _FieldFormDialogState extends State<FieldFormDialog> {
   final _formKey = GlobalKey<FormState>();
 
-  // --- DECLARACIÓN DE CONTROLADORES ---
-  // Se elimina el _ownerIdController
-
   late final TextEditingController _nameController;
   late final TextEditingController _zoneController;
   late final TextEditingController _latController;
@@ -36,7 +37,6 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
   late final TextEditingController _discountPercentageController;
   late final TextEditingController _minPlayersController;
 
-  // ... (el resto de las variables de estado se mantienen igual)
   String? _selectedSurfaceType;
   String? _selectedFormat;
   String? _selectedFootwear;
@@ -55,9 +55,6 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
   void initState() {
     super.initState();
     final data = widget.initialData ?? {};
-
-    // --- INICIALIZACIÓN DE CONTROLADORES ---
-    // Se elimina la inicialización de _ownerIdController
     _nameController = TextEditingController(text: data['name'] ?? '');
     _zoneController = TextEditingController(text: data['zone'] ?? '');
     _latController = TextEditingController(text: data['lat']?.toString() ?? '');
@@ -69,26 +66,16 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     _discountPercentageController = TextEditingController(text: data['discountPercentage']?.toString() ?? '');
     _minPlayersController = TextEditingController(text: data['minPlayersToBook']?.toString() ?? '');
 
-    // ... (el resto de la inicialización se mantiene igual)
-    _selectedSurfaceType = data['surfaceType'];
-    if (!_surfaceTypes.contains(_selectedSurfaceType)) _selectedSurfaceType = null;
-
-    _selectedFormat = data['format'];
-    if (!_formats.contains(_selectedFormat)) _selectedFormat = null;
-
-    _selectedFootwear = data['footwear'];
-    if (!_footwearTypes.contains(_selectedFootwear)) _selectedFootwear = null;
-
-    _selectedDuration = (data['duration'] as num?)?.toDouble();
-    if (!_durations.contains(_selectedDuration)) _selectedDuration = null;
-
+    _selectedSurfaceType = _surfaceTypes.contains(data['surfaceType']) ? data['surfaceType'] : null;
+    _selectedFormat = _formats.contains(data['format']) ? data['format'] : null;
+    _selectedFootwear = _footwearTypes.contains(data['footwear']) ? data['footwear'] : null;
+    _selectedDuration = _durations.contains(data['duration']?.toDouble()) ? data['duration']?.toDouble() : null;
     _isActive = data['isActive'] ?? true;
     _hasDiscount = data['hasDiscount'] ?? false;
   }
 
   @override
   void dispose() {
-    // Se elimina el dispose de _ownerIdController
     _nameController.dispose();
     _zoneController.dispose();
     _latController.dispose();
@@ -102,68 +89,117 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     super.dispose();
   }
 
+  Future<void> _useCurrentLocation() async {
+    try {
+      final permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permiso de ubicación denegado')));
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      setState(() {
+        _latController.text = pos.latitude.toStringAsFixed(6);
+        _lngController.text = pos.longitude.toStringAsFixed(6);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al obtener ubicación: $e')));
+    }
+  }
+
+  Future<void> _selectOnMap() async {
+    final initialLat = double.tryParse(_latController.text) ?? 0.0;
+    final initialLng = double.tryParse(_lngController.text) ?? 0.0;
+    LatLng selectedPoint = LatLng(initialLat, initialLng);
+    final result = await showDialog<LatLng>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Seleccionar ubicación en mapa'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: FlutterMap(
+            options: MapOptions(
+              center: selectedPoint,
+              zoom: 15,
+              onTap: (_, point) => selectedPoint = point,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: ['a', 'b', 'c'],
+                userAgentPackageName: 'com.yourcompany.teamup',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: selectedPoint,
+                    width: 40,
+                    height: 40,
+                    builder: (_) => const Icon(Icons.location_on, color: Colors.red, size: 40),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.of(context).pop(selectedPoint), child: const Text('Confirmar')),
+        ],
+      ),
+    );
+    if (result != null) {
+      setState(() {
+        _latController.text = result.latitude.toStringAsFixed(6);
+        _lngController.text = result.longitude.toStringAsFixed(6);
+      });
+    }
+  }
+
   Future<void> _submitForm() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    // --- 2. OBTENER EL ID DEL USUARIO LOGUEADO ---
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      // Si por alguna razón no hay usuario, muestra un error y no continúes.
-      // Esto es una salvaguarda importante.
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: No se ha podido identificar al usuario. Por favor, inicie sesión de nuevo.'), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: usuario no autenticado'), backgroundColor: Colors.red));
       return;
     }
-    final ownerId = currentUser.uid;
-
     setState(() => _isLoading = true);
 
-    try {
-      final dataToSave = {
-        'ownerId': ownerId, // <-- 3. AÑADIR EL ID AUTOMÁTICAMENTE
-        'name': _nameController.text.trim(),
-        'zone': _zoneController.text.trim(),
-        // ... (el resto de los campos se mantienen igual)
-        'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
-        'lng': double.tryParse(_lngController.text.trim()) ?? 0.0,
-        'pricePerHour': double.tryParse(_priceController.text.trim()) ?? 0.0,
-        'photoUrl': _photoUrlController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'contact': _contactController.text.trim(),
-        'surfaceType': _selectedSurfaceType,
-        'format': _selectedFormat,
-        'footwear': _selectedFootwear,
-        'duration': _selectedDuration,
-        'isActive': _isActive,
-        'hasDiscount': _hasDiscount,
-        'discountPercentage': _hasDiscount ? (double.tryParse(_discountPercentageController.text.trim()) ?? 0.0) : null,
-        'minPlayersToBook': int.tryParse(_minPlayersController.text.trim()) ?? 1,
-        'updatedAt': Timestamp.now(),
-      };
+    final dataToSave = {
+      'ownerId': currentUser.uid,
+      'name': _nameController.text.trim(),
+      'zone': _zoneController.text.trim(),
+      'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
+      'lng': double.tryParse(_lngController.text.trim()) ?? 0.0,
+      'pricePerHour': double.tryParse(_priceController.text.trim()) ?? 0.0,
+      'photoUrl': _photoUrlController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'contact': _contactController.text.trim(),
+      'surfaceType': _selectedSurfaceType,
+      'format': _selectedFormat,
+      'footwear': _selectedFootwear,
+      'duration': _selectedDuration,
+      'isActive': _isActive,
+      'hasDiscount': _hasDiscount,
+      'discountPercentage': _hasDiscount ? (double.tryParse(_discountPercentageController.text.trim()) ?? 0.0) : null,
+      'minPlayersToBook': int.tryParse(_minPlayersController.text.trim()) ?? 1,
+      'updatedAt': Timestamp.now(),
+    };
 
+    try {
       if (widget.isEditing) {
-        // En modo edición, no actualizamos el ownerId ni createdAt.
-        // Se podría hacer, pero generalmente estos campos son inmutables.
         dataToSave.remove('ownerId');
         await FirebaseFirestore.instance.collection('fields').doc(widget.docId!).update(dataToSave);
       } else {
         dataToSave['createdAt'] = Timestamp.now();
         await FirebaseFirestore.instance.collection('fields').add(dataToSave);
       }
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cancha ${widget.isEditing ? 'actualizada' : 'agregada'} con éxito.'), backgroundColor: Colors.green),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cancha ${widget.isEditing ? 'actualizada' : 'agregada'} con éxito'), backgroundColor: Colors.green));
       Navigator.of(context).pop();
-
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar: ${e.toString()}'), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -184,18 +220,17 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
             children: [
               _buildSectionTitle('Información Básica'),
               _buildTextFormField(controller: _nameController, label: 'Nombre de la cancha', icon: Icons.sports_soccer, validator: FormValidators.required),
-              // --- 4. SE ELIMINA EL CAMPO DEL FORMULARIO ---
-              // Ya no se muestra el campo para el ID de propietario.
-              _buildTextFormField(controller: _descriptionController, label: 'Descripción', icon: Icons.description, maxLines: 3),
 
-              // ... (el resto del método build se mantiene exactamente igual)
               _buildSectionTitle('Ubicación'),
               _buildTextFormField(controller: _zoneController, label: 'Zona / Ubicación', icon: Icons.location_on_outlined, validator: FormValidators.required),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(child: _buildTextFormField(controller: _latController, label: 'Latitud', icon: Icons.map, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), validator: FormValidators.isNumeric)),
                   const SizedBox(width: 8),
                   Expanded(child: _buildTextFormField(controller: _lngController, label: 'Longitud', icon: Icons.map, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), validator: FormValidators.isNumeric)),
+                  IconButton(icon: const Icon(Icons.my_location), tooltip: 'Usar mi ubicación', onPressed: _useCurrentLocation),
+                  IconButton(icon: const Icon(Icons.map), tooltip: 'Seleccionar en mapa', onPressed: _selectOnMap),
                 ],
               ),
 
@@ -227,8 +262,6 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     );
   }
 
-  // Los métodos _build... helpers se mantienen igual
-
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
@@ -236,7 +269,14 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     );
   }
 
-  Widget _buildTextFormField({ required TextEditingController controller, required String label, IconData? icon, TextInputType? keyboardType, String? Function(String?)? validator, int maxLines = 1, }) {
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String label,
+    IconData? icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
@@ -254,7 +294,12 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     );
   }
 
-  Widget _buildDropdownFormField<T>({ required T? value, required List<T> items, required String label, required void Function(T?) onChanged, }) {
+  Widget _buildDropdownFormField<T>({
+    required T? value,
+    required List<T> items,
+    required String label,
+    required void Function(T?) onChanged,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: DropdownButtonFormField<T>(
@@ -267,7 +312,12 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     );
   }
 
-  Widget _buildSwitchListTile({ required String title, String? subtitle, required bool value, required void Function(bool) onChanged, }) {
+  Widget _buildSwitchListTile({
+    required String title,
+    String? subtitle,
+    required bool value,
+    required void Function(bool) onChanged,
+  }) {
     return SwitchListTile(
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle, style: Theme.of(context).textTheme.bodySmall) : null,

@@ -1,3 +1,4 @@
+// field_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FieldModel {
@@ -19,7 +20,6 @@ class FieldModel {
   final String description;
   final String footwear;
   final String contact;
-
 
   final bool hasDiscount;
   final double? discountPercentage;
@@ -48,17 +48,20 @@ class FieldModel {
     this.minPlayersToBook = 1,
   });
 
+  /// Coordenadas combinadas de la cancha para filtros de distancia
+  GeoPoint get location => GeoPoint(lat, lng);
+
   factory FieldModel.fromMap(Map<String, dynamic> map, String id) {
     return FieldModel(
       id: id,
-      ownerId: map['ownerId'],
-      name: map['name'],
-      zone: map['zone'],
+      ownerId: map['ownerId'] ?? '',
+      name: map['name'] ?? '',
+      zone: map['zone'] ?? '',
       lat: (map['lat'] as num).toDouble(),
       lng: (map['lng'] as num).toDouble(),
-      surfaceType: map['surfaceType'],
+      surfaceType: map['surfaceType'] ?? '',
       pricePerHour: (map['pricePerHour'] as num).toDouble(),
-      imageUrl: map['photoUrl'],
+      imageUrl: map['photoUrl'] ?? '',
       isActive: map['isActive'] ?? true,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       availability: (map['availability'] as Map).map(
@@ -104,7 +107,7 @@ class FieldModel {
     };
   }
 
-  /// 🔢 Calcula el precio por jugador asumiendo que se unen el mínimo necesario
+  /// Calcula el precio por jugador asumiendo que se unen el mínimo necesario
   double getPricePerPersonAuto() {
     double totalPrice = pricePerHour * duration;
 
