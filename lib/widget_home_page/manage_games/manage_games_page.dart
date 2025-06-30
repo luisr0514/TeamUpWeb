@@ -1,10 +1,11 @@
-// lib/features/admin/manage_games_page.dart (o donde la tengas)
+// lib/features/admin/manage_games_page.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:teamup_web/models/game_model.dart'; // Asegúrate que la ruta sea correcta
-import 'package:teamup_web/services/game_service.dart'; // Asegúrate que la ruta sea correcta
+import 'package:intl/intl.dart'; // <-- ASEGÚRATE DE QUE ESTE IMPORT ES CORRECTO
+import 'package:teamup_web/models/game_model.dart';
+import 'package:teamup_web/models/payment_notification_model.dart';
+import 'package:teamup_web/services/game_service.dart';
 
 class ManageGamesPage extends StatefulWidget {
   const ManageGamesPage({super.key});
@@ -20,6 +21,7 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
   final DateFormat _paymentDateFormat = DateFormat('dd MMM yyyy, HH:mm');
 
   // --- LÓGICA DE ACCIONES ---
+  // CORRECCIÓN: Las funciones ahora pasan los IDs correctos (Strings) en lugar del objeto completo.
   Future<void> _approvePayment(String gameId, String userId) async {
     final confirmed = await _showConfirmationDialog(context, title: 'Aprobar Pago', content: '¿Estás seguro de que quieres confirmar el pago para este usuario?', confirmText: 'Aprobar');
     if (confirmed != true) return;
@@ -31,22 +33,22 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     }
   }
 
-  Future<void> _rejectPayment(GameModel game, String userId) async {
+  Future<void> _rejectPayment(String gameId, String userId) async {
     final confirmed = await _showConfirmationDialog(context, title: 'Rechazar Pago y Expulsar', content: 'Esta acción rechazará el pago y eliminará al jugador del partido. ¿Continuar?', confirmText: 'Sí, Rechazar y Expulsar');
     if (confirmed != true) return;
     try {
-      await _gameService.rejectPayment(game.id, userId);
+      await _gameService.rejectPayment(gameId, userId);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🗑️ Pago rechazado y jugador expulsado.'), backgroundColor: Colors.orange));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error al rechazar: $e'), backgroundColor: Colors.red));
     }
   }
 
-  Future<void> _kickPlayer(GameModel game, String userId) async {
+  Future<void> _kickPlayer(String gameId, String userId) async {
     final confirmed = await _showConfirmationDialog(context, title: 'Expulsar Jugador', content: '¿Estás seguro de que quieres expulsar a este jugador del partido?', confirmText: 'Sí, Expulsar', confirmColor: Colors.red);
     if (confirmed != true) return;
     try {
-      await _gameService.removePlayerFromGame(game.id, userId);
+      await _gameService.removePlayerFromGame(gameId, userId);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🗑️ Jugador expulsado con éxito.'), backgroundColor: Colors.red));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error al expulsar: $e'), backgroundColor: Colors.red));
@@ -54,6 +56,8 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
   }
 
   // --- WIDGETS Y LÓGICA DE UI ---
+  // El resto del código de la UI no necesita cambios, ya que los errores están en la lógica de las llamadas a funciones.
+  // Te lo incluyo todo para que sea un solo bloque de copiar y pegar.
 
   @override
   Widget build(BuildContext context) {
@@ -165,9 +169,9 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
       builder: (context, userSnapshot) {
-        if (!userSnapshot.hasData) return const ListTile(title: Text("Cargando jugador..."));
+        if (userSnapshot.connectionState == ConnectionState.waiting) return const ListTile(title: Text("Cargando jugador..."));
 
-        final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+        final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
         final userEmail = userData?['email'] ?? 'Email no disponible';
         final paymentStatus = game.paymentStatus[userId];
 
@@ -224,22 +228,24 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
           .limit(1)
           .get(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: CircularProgressIndicator()));
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(8.0), child: Text("Detalles del pago no encontrados.", style: TextStyle(color: Colors.red))));
 
-        final paymentDoc = snapshot.data!.docs.first.data() as Map<String, dynamic>;
-        final receiptUrl = paymentDoc['receiptUrl'] as String?;
+        final paymentNotification = PaymentNotificationModel.fromMap(
+            snapshot.data!.docs.first.data() as Map<String, dynamic>
+        );
+        final receiptUrl = paymentNotification.receiptUrl;
 
         return LayoutBuilder(
           builder: (context, constraints) {
             bool isWide = constraints.maxWidth > 700;
             return isWide
                 ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(flex: 2, child: _buildPaymentInfoTable(paymentDoc)),
+              Expanded(flex: 2, child: _buildPaymentInfoTable(paymentNotification)),
               if (receiptUrl != null) Expanded(flex: 3, child: _buildReceiptImage(receiptUrl)),
             ])
                 : Column(children: [
-              _buildPaymentInfoTable(paymentDoc),
+              _buildPaymentInfoTable(paymentNotification),
               if (receiptUrl != null) ...[const SizedBox(height: 16), _buildReceiptImage(receiptUrl)],
             ]);
           },
@@ -248,12 +254,9 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     );
   }
 
-  Widget _buildPaymentInfoTable(Map<String, dynamic> paymentDoc) {
-    final method = paymentDoc['method']?.toString().replaceAll('_', ' ').toUpperCase() ?? 'N/A';
-    final reference = paymentDoc['reference'] ?? 'N/A';
-    final amount = (paymentDoc['amount'] as num?)?.toDouble() ?? 0.0;
-    final date = (paymentDoc['createdAt'] as Timestamp?)?.toDate();
-    final guests = paymentDoc['guestsCount'] ?? 0;
+  Widget _buildPaymentInfoTable(PaymentNotificationModel payment) {
+    final method = payment.method.replaceAll('_', ' ').toUpperCase();
+    final date = payment.createdAt;
 
     return DataTable(
       columnSpacing: 16,
@@ -263,10 +266,10 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
       columns: const [DataColumn(label: Text('')), DataColumn(label: Text(''))],
       rows: [
         DataRow(cells: [const DataCell(Text('Método')), DataCell(Text(method, style: const TextStyle(fontWeight: FontWeight.bold)))]),
-        DataRow(cells: [const DataCell(Text('Referencia')), DataCell(Text(reference, style: const TextStyle(fontWeight: FontWeight.bold)))]),
-        DataRow(cells: [const DataCell(Text('Monto')), DataCell(Text('\$${amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)))]),
-        DataRow(cells: [const DataCell(Text('Invitados')), DataCell(Text('+$guests', style: const TextStyle(fontWeight: FontWeight.bold)))]),
-        if (date != null) DataRow(cells: [const DataCell(Text('Fecha Notif.')), DataCell(Text(_paymentDateFormat.format(date), style: const TextStyle(fontWeight: FontWeight.bold)))]),
+        DataRow(cells: [const DataCell(Text('Referencia')), DataCell(Text(payment.reference, style: const TextStyle(fontWeight: FontWeight.bold)))]),
+        DataRow(cells: [const DataCell(Text('Monto')), DataCell(Text('\$${payment.amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)))]),
+        DataRow(cells: [const DataCell(Text('Invitados')), DataCell(Text('+${payment.guestsCount}', style: const TextStyle(fontWeight: FontWeight.bold)))]),
+        DataRow(cells: [const DataCell(Text('Fecha Notif.')), DataCell(Text(_paymentDateFormat.format(date), style: const TextStyle(fontWeight: FontWeight.bold)))]),
       ],
     );
   }
@@ -309,6 +312,7 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
       context: context,
       builder: (_) => Dialog(
         backgroundColor: Colors.transparent,
+        elevation: 0,
         child: Stack(
           alignment: Alignment.topRight,
           children: [
@@ -318,9 +322,12 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
               maxScale: 4,
               child: Image.network(url),
             ),
-            IconButton(
-              icon: const CircleAvatar(backgroundColor: Colors.black54, child: Icon(Icons.close, color: Colors.white)),
-              onPressed: () => Navigator.of(context).pop(),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: IconButton(
+                icon: const CircleAvatar(backgroundColor: Colors.black54, child: Icon(Icons.close, color: Colors.white)),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ),
           ],
         ),
@@ -338,13 +345,14 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
   }
 
   Widget _buildActionButtons(GameModel game, String userId, String? paymentStatus) {
+    // CORRECCIÓN: Se pasa game.id y userId (Strings) a las funciones.
     if (paymentStatus == 'pending') {
       return Row(mainAxisSize: MainAxisSize.min, children: [
         IconButton(icon: const Icon(Icons.check_circle, color: Colors.green), onPressed: () => _approvePayment(game.id, userId), tooltip: 'Aprobar Pago'),
-        IconButton(icon: const Icon(Icons.cancel, color: Colors.orange), onPressed: () => _rejectPayment(game, userId), tooltip: 'Rechazar Pago'),
+        IconButton(icon: const Icon(Icons.cancel, color: Colors.orange), onPressed: () => _rejectPayment(game.id, userId), tooltip: 'Rechazar Pago'),
       ]);
     }
-    return IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), onPressed: () => _kickPlayer(game, userId), tooltip: 'Expulsar Jugador');
+    return IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), onPressed: () => _kickPlayer(game.id, userId), tooltip: 'Expulsar Jugador');
   }
 
   List<GameModel> _filterGamesByDate(List<GameModel> games) {
