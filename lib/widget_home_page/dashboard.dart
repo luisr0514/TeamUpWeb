@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart'; // Import fl_chart
 import 'reports.dart'; // Asegúrate de importar tu página de reportes
 
 class Dashboard extends StatefulWidget {
@@ -13,6 +14,8 @@ class _DashboardState extends State<Dashboard> {
   int activeUsersCount = 0;
   int newUsersTodayCount = 0;
   int totalReportsCount = 0;
+  int pendingReportsCount = 0; // New: To store pending reports
+  int resolvedReportsCount = 0; // New: To store resolved reports
   bool isLoading = true;
   String errorMessage = '';
 
@@ -26,7 +29,7 @@ class _DashboardState extends State<Dashboard> {
     try {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      
+
       final usersFuture = FirebaseFirestore.instance.collection('users').get();
       final reportsFuture = FirebaseFirestore.instance.collection('reports').get();
       final newUsersFuture = FirebaseFirestore.instance
@@ -42,14 +45,28 @@ class _DashboardState extends State<Dashboard> {
       final reportsSnapshot = results[1] as QuerySnapshot;
       final newUsersSnapshot = results[2] as QuerySnapshot;
 
+      // Process reports for pending and resolved counts
+      int pending = 0;
+      int resolved = 0;
+      for (var doc in reportsSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['status'] == 'pending') { // Assuming a 'status' field in your reports
+          pending++;
+        } else if (data['status'] == 'resolved') {
+          resolved++;
+        }
+      }
+
       setState(() {
         activeUsersCount = usersSnapshot.docs.length;
         totalReportsCount = reportsSnapshot.docs.length;
         newUsersTodayCount = newUsersSnapshot.docs.length;
+        pendingReportsCount = pending; // Set new counts
+        resolvedReportsCount = resolved; // Set new counts
         isLoading = false;
         errorMessage = '';
       });
-      
+
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -64,17 +81,19 @@ class _DashboardState extends State<Dashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
             'Dashboard',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color.fromARGB(255, 46, 69, 23),
             ),
           ),
           const SizedBox(height: 20),
-          
+
           if (errorMessage.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -86,7 +105,7 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ),
             ),
-          
+
           Wrap(
             spacing: 16,
             runSpacing: 16,
@@ -119,9 +138,9 @@ class _DashboardState extends State<Dashboard> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 30),
-          
+
           Expanded(
             child: GridView.count(
               crossAxisCount: 2,
@@ -129,19 +148,24 @@ class _DashboardState extends State<Dashboard> {
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               children: [
-                _buildDashboardCard(
-                  child: const Center(child: Text('User  Growth Chart')),
+                /*_buildDashboardCard(
+                  title: 'User Growth Chart', // Added title for clarity
+                  child: const Center(child: Text('Placeholder for User Growth Chart')),
                   color: Colors.grey[200]!,
-                ),
+                ),*/
                 _buildDashboardCard(
-                  child: const Center(child: Text('Report Trends')),
+                  title: 'Reportes del sistema', // Added title for clarity
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildReportStatusChart(), // This is where the chart will go
                   color: Colors.grey[200]!,
-                ),
+                ),/*
                 _buildDashboardCard(
-                  child: const Center(child: Text('Recent Activity')),
+                  title: 'Recent Activity', // Added title for clarity
+                  child: const Center(child: Text('Placeholder for Recent Activity')),
                   color: Colors.grey[200]!,
                   fullWidth: true,
-                ),
+                ),*/
               ],
             ),
           ),
@@ -201,9 +225,10 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  Widget _buildDashboardCard({
+Widget _buildDashboardCard({
     required Widget child,
     required Color color,
+    String title = 'Placeholder', // Added title parameter
     bool fullWidth = false,
   }) {
     return Card(
@@ -213,25 +238,98 @@ class _DashboardState extends State<Dashboard> {
       ),
       child: Container(
         width: fullWidth ? double.infinity : null,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16), // Padding for the entire card content
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Placeholder for chart/data',
+              title,
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
+                fontWeight: FontWeight.bold, 
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 20), 
             Expanded(
-              child: Center(
-                child: child,
+              child: Padding( 
+                padding: const EdgeInsets.only(top: 12.0, bottom: 12.0), 
+                child: Center( 
+                  child: child,
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Widget para crear los charts
+  Widget _buildReportStatusChart() {
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        barTouchData: BarTouchData(enabled: true),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                String text;
+                switch (value.toInt()) {
+                  case 0:
+                    text = 'Pendientes';
+                    break;
+                  case 1:
+                    text = 'Resueltos';
+                    break;
+                  default:
+                    text = '';
+                    break;
+                }
+                return SideTitleWidget(
+                  meta : meta,
+                  space: 4,
+                  child: Text(text, style: const TextStyle(fontSize: 10)),
+                );
+              },
+              reservedSize: 20,
+            ),
+          ),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        barGroups: [
+          BarChartGroupData(
+            x: 0,
+            barRods: [
+              BarChartRodData(
+                toY: pendingReportsCount.toDouble(),
+                color: Colors.orange,
+                width: 20,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+            showingTooltipIndicators: [0],
+          ),
+          BarChartGroupData(
+            x: 1,
+            barRods: [
+              BarChartRodData(
+                toY: resolvedReportsCount.toDouble(),
+                color: Colors.green,
+                width: 20,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+            showingTooltipIndicators: [0],
+          ),
+        ],
       ),
     );
   }

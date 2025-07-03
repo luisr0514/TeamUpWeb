@@ -67,7 +67,7 @@ class Header extends StatelessWidget {
               // Agregar lógica de salida aquí
             },
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: const Color.fromARGB(255, 13, 84, 28),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

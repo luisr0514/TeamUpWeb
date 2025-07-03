@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+
 class Reports extends StatelessWidget {
   const Reports({Key? key}) : super(key: key);
 
@@ -10,14 +11,6 @@ class Reports extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reportes'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // Lógica de búsqueda
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -32,6 +25,8 @@ class Reports extends StatelessWidget {
       ),
     );
   }
+
+
 
   Widget _buildReportsSummary() {
     return Padding(

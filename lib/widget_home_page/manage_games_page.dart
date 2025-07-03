@@ -73,8 +73,8 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Fila con ambos botones alineados horizontalmente a la misma altura
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 ElevatedButton.icon(
                   icon: const Icon(Icons.date_range),
@@ -101,20 +101,7 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
                     splashRadius: 20,
                   ),
                 const Spacer(),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.download),
-                  label: const Text(
-                    'Exportar CSV',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onPressed: () {
-                    // Sin funcionalidad intencionada
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 125, 176, 64),
-                    foregroundColor: Colors.white,
-                  ),
-                ),
+                
               ],
             ),
             const SizedBox(height: 16),

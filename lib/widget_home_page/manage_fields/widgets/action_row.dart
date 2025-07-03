@@ -16,7 +16,6 @@ class ActionRow extends StatelessWidget {
       children: [
         _buildSearchField(),
         const SizedBox(width: 16),
-        _buildActionButton('Export CSV', Colors.transparent),
         const SizedBox(width: 16),
         _buildAddFieldButton(),
       ],
@@ -76,21 +75,16 @@ class ActionRow extends StatelessWidget {
           color: const Color.fromARGB(255, 125, 176, 64),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add, color: Colors.white, size: 16),
-            SizedBox(width: 8),
-            Text(
-              'Agregar cancha',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
+        child: const Center( 
+          child: Text(
+            'Agregar cancha',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
               ),
             ),
-          ],
         ),
       ),
     );
