@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
 
 class Header extends StatelessWidget {
+  final String adminEmail; // Campo para el correo del administrador
+
+  // Constructor que recibe el correo del administrador
+  Header({required this.adminEmail});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -42,9 +47,10 @@ class Header extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const Text(
-                'admin@plei.com',
-                style: TextStyle(
+              // Usar el correo del administrador pasado como parámetro
+              Text(
+                adminEmail,
+                style: const TextStyle(
                   color: Color(0xFF6B7280),
                   fontSize: 12,
                   fontFamily: 'Inter',

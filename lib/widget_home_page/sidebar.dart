@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:teamup_web/widget_home_page/pagos.dart';
 
 import 'manage_games_page.dart'; // Asegúrate de importar tus páginas
 import 'manage_fields/manage_fields_page.dart';
@@ -70,6 +71,12 @@ class Sidebar extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => SettingsPage()),
+              );
+            }),
+            _buildMenuItem(context, 'Pagos', false, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Pagos()),
               );
             }),
           ],
