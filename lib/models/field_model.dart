@@ -13,7 +13,6 @@ class FieldModel {
   final double lng;
   final String surfaceType;
   final double pricePerHour;
-  /// Lista de URLs de las imágenes de la cancha para la galería.
   final List<String> imageUrls;
 
   final bool isActive;
@@ -22,7 +21,6 @@ class FieldModel {
   final String format;
   final double duration;
   final String description;
-
 
   final String phone;
   final String email;
