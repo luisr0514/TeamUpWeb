@@ -1,10 +1,11 @@
-// lib/widget_home_page/pagos_view/payment_history_dialog.dart
+// lib/widget_home_page/pagos_view/payment_history_dialog.dart (ACTUALIZADO)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:teamup_web/models/payment_notification_model.dart';
+// <-- CAMBIO: Ruta de importación actualizada
 import 'package:teamup_web/models/user_model.dart';
+import 'package:teamup_web/models/payment_notification_model.dart';
 import 'payment_review_dialog.dart';
 
 class PaymentHistoryDialog extends StatelessWidget {
@@ -82,7 +83,6 @@ class PaymentHistoryDialog extends StatelessWidget {
         width: MediaQuery.of(context).size.width * 0.5,
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
-          // ► Ajusta aquí el nombre de tu colección si es distinto:
               .collection('payment_notifications')
               .where('userId', isEqualTo: user.uid)
               .orderBy('createdAt', descending: true)

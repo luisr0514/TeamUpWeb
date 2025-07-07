@@ -1,9 +1,10 @@
-// lib/widget_home_page/pagos.dart
+// lib/widget_home_page/pagos.dart (ACTUALIZADO)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:teamup_web/models/payment_notification_model.dart';
+// <-- CAMBIO: Ruta de importación actualizada
 import 'package:teamup_web/models/user_model.dart';
+import 'package:teamup_web/models/payment_notification_model.dart';
 import 'package:teamup_web/services/game_service.dart';
 import 'package:teamup_web/services/notification_service.dart';
 
@@ -36,9 +37,6 @@ class _PagosState extends State<Pagos> {
     _searchController.dispose();
     super.dispose();
   }
-
-  // --- LÓGICA DE NEGOCIO (ACCIONES DEL ADMIN) ---
-  // Esta lógica permanece en el widget padre porque necesita acceso a los servicios y al ScaffoldMessenger.
 
   Future<void> _handlePaymentAction(
       BuildContext context, PaymentNotificationModel payment, bool approve) async {
@@ -76,9 +74,6 @@ class _PagosState extends State<Pagos> {
     }
   }
 
-  // --- MÉTODOS PARA MOSTRAR DIÁLOGOS ---
-  // Estos métodos se simplifican para llamar a los nuevos widgets de diálogo.
-
   void _showPaymentHistory(UserModel user) {
     showDialog(
       context: context,
@@ -88,9 +83,6 @@ class _PagosState extends State<Pagos> {
       ),
     );
   }
-
-  // --- WIDGET BUILD PRINCIPAL ---
-  // Ahora es mucho más limpio y se enfoca en la maquetación y el estado.
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +133,6 @@ class _PagosState extends State<Pagos> {
             itemCount: filteredDocs.length,
             itemBuilder: (context, index) {
               final user = UserModel.fromMap(filteredDocs[index].data() as Map<String, dynamic>, filteredDocs[index].id);
-              // Usamos el nuevo widget UserPaymentCard
               return UserPaymentCard(
                 user: user,
                 onShowPaymentHistory: () => _showPaymentHistory(user),

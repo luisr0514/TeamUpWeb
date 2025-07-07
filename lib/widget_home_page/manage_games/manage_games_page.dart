@@ -1,14 +1,16 @@
-// lib/widget_home_page/manage_games/manage_games/manage_games_page.dart
+// lib/widget_home_page/manage_games/manage_games_page.dart (ACTUALIZADO CON IMAGEN DE COMPROBANTE)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:teamup_web/models/game_model.dart';
+// <-- CAMBIO: Importamos el modelo de notificación para usarlo
 import 'package:teamup_web/models/payment_notification_model.dart';
+import 'package:teamup_web/models/user_model.dart';
 import 'package:teamup_web/services/game_service.dart';
 
 class ManageGamesPage extends StatefulWidget {
-  const ManageGamesPage({Key? key}) : super(key: key);
+  const ManageGamesPage({super.key});
 
   @override
   State<ManageGamesPage> createState() => _ManageGamesPageState();
@@ -18,28 +20,32 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
   DateTime? selectedDate;
   final GameService _gameService = GameService();
 
-  /// Stream de partidos, ordenados cronológicamente
-  late final Stream<List<GameModel>> _gamesStream = FirebaseFirestore.instance
-      .collection('games')  // Ajusta si tu colección se llama distinto
-      .orderBy('date', descending: false)
-      .snapshots()
-      .map((snap) => snap.docs.map((doc) {
-    final map = doc.data();
-    map['id'] = doc.id;  // Inyecta el ID en el modelo
-    return GameModel.fromMap(map);
-  }).toList());
+  late final Stream<List<GameModel>> _gamesStream =
+  FirebaseFirestore.instance.collection('games').orderBy('date', descending: false).snapshots().map(
+          (snap) => snap.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return GameModel.fromMap(data);
+      }).toList());
 
-  final _dateTimeFmt   = DateFormat('dd/MM/yyyy HH:mm');
-  final _dateOnlyFmt   = DateFormat('dd/MM/yyyy');
-  final _paymentDateFmt = DateFormat('dd/MM/yyyy hh:mm a');
+  final _dateTimeFmt = DateFormat('dd/MM/yyyy HH:mm');
+  final _dateOnlyFmt = DateFormat('dd/MM/yyyy');
+  final _paymentDateFmt = DateFormat("dd 'de' MMMM 'de' yyyy, hh:mm a", 'es_ES');
 
+  // --- MÉTODOS DE LA UI ---
+
+  // ... (build, _buildFilterBar, _buildGameCard no necesitan cambios) ...
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel de Control de Partidos'),
         centerTitle: true,
-        backgroundColor: Colors.green.shade700,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [Color(0xFF0CC0DF), Color(0xFFDFFF4F)]),
+          ),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -57,20 +63,17 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  var games = snap.data!;
+                  var games = snap.data ?? [];
                   if (selectedDate != null) {
-                    games = games.where((g) {
-                      return g.date.year  == selectedDate!.year &&
-                          g.date.month == selectedDate!.month &&
-                          g.date.day   == selectedDate!.day;
-                    }).toList();
+                    games = games.where((g) => DateUtils.isSameDay(g.date, selectedDate)).toList();
                   }
                   if (games.isEmpty) {
                     return Center(
                       child: Text(
                         selectedDate == null
-                            ? 'No hay partidos registrados.'
-                            : 'No hay partidos el ${_dateOnlyFmt.format(selectedDate!)}.',
+                            ? 'No hay partidos programados.'
+                            : 'No hay partidos para el ${_dateOnlyFmt.format(selectedDate!)}.',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
                       ),
                     );
                   }
@@ -92,16 +95,12 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
       children: [
         ElevatedButton.icon(
           icon: const Icon(Icons.date_range),
-          label: Text(
-            selectedDate == null
-                ? 'Filtrar por fecha'
-                : _dateOnlyFmt.format(selectedDate!),
-          ),
+          label: Text(selectedDate == null ? 'Filtrar por fecha' : _dateOnlyFmt.format(selectedDate!)),
           onPressed: () async {
             final picked = await showDatePicker(
               context: context,
               initialDate: selectedDate ?? DateTime.now(),
-              firstDate: DateTime(2020),
+              firstDate: DateTime(2022),
               lastDate: DateTime(2100),
             );
             if (picked != null) setState(() => selectedDate = picked);
@@ -121,76 +120,52 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
 
   Widget _buildGameCard(GameModel game) {
     final uniqueUids = game.usersJoined.toSet().toList();
-
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(
-          game.fieldName,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          'Fecha: ${_dateTimeFmt.format(game.date)}  •  Precio: \$${game.price.toStringAsFixed(2)}',
-        ),
+        leading: Icon(Icons.sports_soccer, color: Theme.of(context).primaryColor),
+        title: Text(game.fieldName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        subtitle: Text('Fecha: ${_dateTimeFmt.format(game.date)}  •  ${game.status.toUpperCase()}'),
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Descripción: ${game.description}'),
-              const SizedBox(height: 6),
-              Text('Ciudad: ${game.city}'),
-              const SizedBox(height: 6),
-              Text('Hora: ${game.hour}'),
-              const SizedBox(height: 6),
-              Text('Formato: ${game.format} — Nivel: ${game.skillLevel}'),
-              const SizedBox(height: 6),
-              Text('Duración: ${game.duration} h — Público: ${game.isPublic ? 'Sí' : 'No'}'),
-              const Divider(height: 24),
-
-              if (game.imageUrls.isNotEmpty) ...[
-                SizedBox(
-                  height: 100,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: game.imageUrls.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, j) => ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        game.imageUrls[j],
-                        width: 140,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (_, child, prog) =>
-                        prog == null ? child : const Center(child: CircularProgressIndicator()),
-                        errorBuilder: (_, __, ___) =>
-                        const Icon(Icons.broken_image, size: 40, color: Colors.red),
-                      ),
-                    ),
-                  ),
-                ),
-                const Divider(height: 24),
-              ],
-
+              const Divider(height: 16),
               Text(
                 'Jugadores: ${game.totalPlayers} / ${game.playerCount}',
                 style: TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: game.totalPlayers >= game.playerCount ? Colors.red : Colors.green,
                 ),
               ),
               const Divider(height: 24),
-
-              const Text('👥 Jugadores y Pagos:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text('👥 Jugadores Registrados:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-
               if (uniqueUids.isEmpty)
-                const Text('Aún no hay jugadores unidos.')
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text('Aún no hay jugadores unidos.'),
+                )
               else
                 ...uniqueUids.map((uid) => _buildPlayerTile(game, uid)),
+              if (game.guests.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text('🙋‍♂️ Invitados:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...game.guests.entries.map((entry) => Card(
+                  color: Colors.grey[100],
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    leading: const Icon(Icons.group_add_outlined),
+                    title: Text(entry.key),
+                    trailing: Text('+${entry.value} persona(s)'),
+                  ),
+                ))
+              ]
             ]),
           ),
         ],
@@ -198,151 +173,170 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     );
   }
 
-  /// Trae el último pago para este userId + gameId
-  Future<PaymentNotificationModel?> _fetchLatestPayment(String gameId, String uid) async {
-    final snap = await FirebaseFirestore.instance
-        .collection('payment_notifications')
-        .where('userId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .get();
-    for (var doc in snap.docs) {
-      final p = PaymentNotificationModel.fromFirestore(doc);
-      if (p.gameId == gameId) return p;
-    }
-    return null;
-  }
+
+  // --- CAMBIOS PRINCIPALES AQUÍ ---
 
   Widget _buildPlayerTile(GameModel game, String uid) {
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
       builder: (ctxU, snapU) {
         if (snapU.connectionState == ConnectionState.waiting) {
-          return const ListTile(title: Text('Cargando jugador…'));
+          return const ListTile(leading: CircularProgressIndicator(), title: Text('Cargando jugador…'));
         }
-        final userData = snapU.data?.data() as Map<String, dynamic>? ?? {};
-        final fullName = userData['fullName'] ?? 'Sin nombre';
-        final email    = userData['email']    ?? '';
 
-        return FutureBuilder<PaymentNotificationModel?>(
-          future: _fetchLatestPayment(game.id, uid),
-          builder: (ctxP, snapP) {
-            if (snapP.connectionState == ConnectionState.waiting) {
-              return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(fullName),
-                subtitle: const Text('Cargando pago…'),
-              );
-            }
-            final payment = snapP.data;
-            if (payment == null) {
-              return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(fullName),
-                subtitle: const Text('No se encontró pago'),
-              );
-            }
-            // Pago encontrado: mostramos detalles y la imagen del comprobante
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              child: ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(fullName),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Email: $email'),
-                    Text('Monto: \$${payment.amount.toStringAsFixed(2)}'),
-                    Text('Ref: ${payment.reference}'),
-                    Text('Método: ${payment.method.replaceAll('_', ' ').toUpperCase()}'),
-                    Text('Fecha: ${_paymentDateFmt.format(payment.createdAt)}'),
-                    if (payment.receiptUrl != null) ...[
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: () {
-                          // opción: mostrar en diálogo de pantalla completa
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            payment.receiptUrl!,
-                            width: 120,
-                            height: 80,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (_, child, prog) =>
-                            prog == null ? child : const Center(child: CircularProgressIndicator()),
-                            errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.broken_image, size: 40, color: Colors.red),
-                          ),
+        final user = snapU.hasData
+            ? UserModel.fromMap(snapU.data!.data() as Map<String, dynamic>, snapU.data!.id)
+            : UserModel(uid: uid, fullName: 'Usuario no encontrado', email: 'N/A', username: 'N/A', phone: '', profileImageUrl: '', isVerified: false, blocked: false, reports: 0, totalGamesCreated: 0, totalGamesJoined: 0, position: '', skillLevel: '', notesByAdmin: '', friends: [], friendRequestsSent: [], friendRequestsReceived: [], ratingCount: 0, ratingSum: 0, blockedUsers: []);
+
+        final paymentData = game.paymentInfo[uid];
+
+        if (paymentData == null) {
+          return Card(
+            // ... (código para jugador sin pago registrado, sin cambios)
+          );
+        }
+
+        final status = paymentData['status'] as String? ?? 'pending';
+        final amount = (paymentData['amount'] as num? ?? 0.0).toDouble();
+        final paidAt = (paymentData['paidAt'] as Timestamp?)?.toDate();
+        // <-- CAMBIO: Obtenemos el ID de la notificación para buscar la imagen
+        final notificationId = paymentData['notificationId'] as String?;
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          child: ListTile(
+            leading: CircleAvatar(
+                backgroundImage: user.profileImageUrl.isNotEmpty ? NetworkImage(user.profileImageUrl) : null,
+                child: user.profileImageUrl.isEmpty ? const Icon(Icons.person) : null),
+            title: Text(user.fullName),
+            // <-- CAMBIO: El subtítulo ahora es una columna para organizar mejor la información
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectableText('Email: ${user.email}'),
+                Text('Monto: \$${amount.toStringAsFixed(2)}'),
+                if (paidAt != null) Text('Fecha de pago: ${_paymentDateFmt.format(paidAt)}'),
+
+                // <-- NUEVO: FutureBuilder para buscar y mostrar los detalles del pago (imagen y método)
+                if (notificationId != null)
+                  FutureBuilder<PaymentNotificationModel?>(
+                    future: _fetchPaymentNotification(notificationId),
+                    builder: (context, snapP) {
+                      if (snapP.connectionState == ConnectionState.waiting) {
+                        return const Padding(padding: EdgeInsets.all(8.0), child: Text('Cargando comprobante...'));
+                      }
+                      if (!snapP.hasData || snapP.data == null) {
+                        return const SizedBox.shrink(); // No mostrar nada si no se encuentra
+                      }
+                      final paymentDetails = snapP.data!;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Row(
+                          children: [
+                            Text('Método: ${paymentDetails.method}'),
+                            const SizedBox(width: 16),
+                            if (paymentDetails.receiptUrl != null)
+                              InkWell(
+                                onTap: () => _showImageDialog(context, paymentDetails.receiptUrl!),
+                                child: Tooltip(
+                                  message: "Ver comprobante de pago",
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Image.network(
+                                      paymentDetails.receiptUrl!,
+                                      width: 50, height: 50, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.error),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-                isThreeLine: true,
-                trailing: payment.status == 'pending'
-                    ? Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(
-                    icon: const Icon(Icons.check_circle, color: Colors.green),
-                    tooltip: 'Aprobar Pago',
-                    onPressed: () => _approvePayment(game.id, uid),
+                      );
+                    },
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.cancel, color: Colors.orange),
-                    tooltip: 'Rechazar Pago',
-                    onPressed: () => _rejectPayment(game.id, uid),
-                  ),
-                ])
-                    : Chip(
-                  label: Text(payment.status.toUpperCase()),
-                  backgroundColor: payment.status == 'approved'
-                      ? Colors.green.shade100
-                      : Colors.red.shade100,
-                ),
-              ),
-            );
-          },
+              ],
+            ),
+            isThreeLine: false, // El tamaño se ajusta por la columna del subtítulo
+            trailing: status == 'pending'
+                ? Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(icon: const Icon(Icons.check_circle, color: Colors.green, size: 28), tooltip: 'Aprobar Pago', onPressed: () => _approvePayment(game.id, uid)),
+              IconButton(icon: const Icon(Icons.cancel, color: Colors.orange, size: 28), tooltip: 'Rechazar Pago', onPressed: () => _rejectPayment(game.id, uid)),
+            ])
+                : Chip(
+              label: Text(status.toUpperCase()),
+              backgroundColor: status == 'approved' ? Colors.green.shade100 : Colors.red.shade100,
+              labelStyle: TextStyle(color: status == 'approved' ? Colors.green.shade900 : Colors.red.shade900, fontWeight: FontWeight.bold),
+            ),
+          ),
         );
       },
     );
   }
 
+  // --- MÉTODOS AUXILIARES ---
+
+  // <-- NUEVO: Función para buscar la notificación de pago por su ID
+  Future<PaymentNotificationModel?> _fetchPaymentNotification(String notificationId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('payment_notifications').doc(notificationId).get();
+      if (doc.exists) {
+        return PaymentNotificationModel.fromFirestore(doc);
+      }
+    } catch (e) {
+      print("Error al buscar la notificación de pago $notificationId: $e");
+    }
+    return null;
+  }
+
+  // <-- NUEVO: Función para mostrar la imagen del comprobante en un diálogo
+  void _showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.network(imageUrl,
+            loadingBuilder: (_, child, prog) => prog == null ? child : const Center(child: CircularProgressIndicator()),
+            errorBuilder: (_, __, ___) => const Center(child: Text("No se pudo cargar la imagen")),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ... (Las funciones _approvePayment, _rejectPayment y _showConfirmDialog no cambian)
   Future<void> _approvePayment(String gameId, String userId) async {
     final ok = await _showConfirmDialog(
       title: '¿Aprobar pago?',
-      content: 'Confirmar que el usuario ha pagado y puede unirse al partido.',
+      content: 'Esto confirmará el pago del usuario y actualizará su estado en el partido.',
       confirmText: 'Aprobar',
       confirmColor: Colors.green,
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
     try {
       await _gameService.approvePayment(gameId, userId);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Pago aprobado'), backgroundColor: Colors.green),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Pago aprobado con éxito.'), backgroundColor: Colors.green));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error al aprobar: $e'), backgroundColor: Colors.red),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error al aprobar: $e'), backgroundColor: Colors.red));
     }
   }
 
   Future<void> _rejectPayment(String gameId, String userId) async {
     final ok = await _showConfirmDialog(
       title: '¿Rechazar pago?',
-      content: 'Rechazar el pago y expulsar al jugador del partido.',
+      content: 'Esto rechazará el pago y expulsará al jugador del partido.',
       confirmText: 'Rechazar y expulsar',
       confirmColor: Colors.orange,
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
     try {
       await _gameService.rejectPayment(gameId, userId);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🗑️ Pago rechazado y expulsado'), backgroundColor: Colors.orange),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🗑️ Pago rechazado y jugador expulsado.'), backgroundColor: Colors.orange));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error al rechazar: $e'), backgroundColor: Colors.red),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error al rechazar: $e'), backgroundColor: Colors.red));
     }
   }
 

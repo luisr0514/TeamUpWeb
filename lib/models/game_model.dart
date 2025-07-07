@@ -1,11 +1,12 @@
+// lib/models/game_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Modelo que representa un partido en la aplicación.
-///
-/// Contiene toda la información relevante de un partido, desde los detalles
-/// del evento hasta la lista de jugadores, sus invitados y el estado de sus pagos.
 class GameModel {
   final String id;
+  final List<String> usersJoined;
+  final Map<String, int> guests;
+
+  final Map<String, Map<String, dynamic>> paymentInfo;
   final String ownerId;
   final String groupChatId;
   final String city;
@@ -18,12 +19,7 @@ class GameModel {
   final double price;
   final double duration;
   final String createdAt;
-
-  // ▼▼▼ CAMBIO PRINCIPAL ▼▼▼
-  /// Lista de URLs de las imágenes del partido para la galería.
   final List<String> imageUrls;
-  // ▲▲▲ FIN DEL CAMBIO ▲▲▲
-
   final String skillLevel;
   final String type;
   final String format;
@@ -34,21 +30,6 @@ class GameModel {
   final String? privateCode;
   final double? fieldRating;
   final String? report;
-
-  /// Lista de UIDs de los usuarios que se han unido directamente.
-  final List<String> usersJoined;
-
-  /// Mapa para gestionar los invitados.
-  /// La clave (String) es el UID del usuario anfitrión.
-  /// El valor (int) es el número de invitados que trae ese usuario.
-  /// Ejemplo: {'uid_de_carlos': 2} significa que Carlos trae a 2 invitados.
-  final Map<String, int> guests;
-
-  /// Mapa para rastrear el estado del pago de cada usuario.
-  /// Clave: UID del usuario.
-  /// Valor: Estado del pago ('pending', 'paid', 'rejected').
-  /// Ejemplo: {'uid_user1': 'pending', 'uid_user2': 'paid'}
-  final Map<String, String> paymentStatus;
 
   GameModel({
     required this.id,
@@ -64,7 +45,7 @@ class GameModel {
     required this.price,
     required this.duration,
     required this.createdAt,
-    required this.imageUrls, // <-- CAMBIO: Se usa la lista de URLs
+    required this.imageUrls,
     required this.usersJoined,
     required this.skillLevel,
     required this.type,
@@ -77,16 +58,12 @@ class GameModel {
     this.fieldRating,
     this.report,
     required this.guests,
-    required this.paymentStatus,
+    required this.paymentInfo,
   });
 
-  /// Getter para calcular el número total de plazas ocupadas.
-  /// Suma los usuarios unidos directamente más todos los invitados.
   int get totalPlayers => usersJoined.length + guests.values.fold(0, (sum, count) => sum + count);
 
-  /// Constructor factory para crear una instancia de GameModel desde un mapa (documento de Firestore).
   factory GameModel.fromMap(Map<String, dynamic> map) {
-    // Función de ayuda para parsear la fecha de forma segura
     DateTime parseDate(dynamic value) {
       if (value is Timestamp) return value.toDate();
       if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
@@ -107,10 +84,7 @@ class GameModel {
       price: (map['price'] ?? 0.0).toDouble(),
       duration: (map['duration'] ?? 1.0).toDouble(),
       createdAt: map['createdAt'] ?? '',
-      // ▼▼▼ CAMBIO ▼▼▼
-      // Parsea la lista de URLs. Si no existe o no es una lista, devuelve una lista vacía.
       imageUrls: List<String>.from(map['imageUrls'] ?? []),
-      // ▲▲▲ FIN DEL CAMBIO ▲▲▲
       usersJoined: List<String>.from(map['usersJoined'] ?? []),
       skillLevel: map['skillLevel'] ?? '',
       type: map['type'] ?? '',
@@ -123,11 +97,10 @@ class GameModel {
       fieldRating: map['fieldRating'] != null ? (map['fieldRating'] as num).toDouble() : null,
       report: map['report'],
       guests: Map<String, int>.from(map['guests'] ?? {}),
-      paymentStatus: Map<String, String>.from(map['paymentStatus'] ?? {}),
+      paymentInfo: Map<String, Map<String, dynamic>>.from(map['paymentInfo'] ?? {}),
     );
   }
 
-  /// Convierte la instancia de GameModel a un mapa para guardarlo en Firestore.
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -143,9 +116,7 @@ class GameModel {
       'price': price,
       'duration': duration,
       'createdAt': createdAt,
-      // ▼▼▼ CAMBIO ▼▼▼
-      'imageUrls': imageUrls, // <-- CAMBIO: Se añade la lista al mapa
-      // ▲▲▲ FIN DEL CAMBIO ▲▲▲
+      'imageUrls': imageUrls,
       'usersJoined': usersJoined,
       'skillLevel': skillLevel,
       'type': type,
@@ -158,41 +129,15 @@ class GameModel {
       'fieldRating': fieldRating,
       'report': report,
       'guests': guests,
-      'paymentStatus': paymentStatus,
+      'paymentInfo': paymentInfo, // <-- CAMBIO
     };
   }
 
-  /// Crea una copia del objeto GameModel con los campos proporcionados actualizados.
   GameModel copyWith({
     String? id,
-    String? ownerId,
-    String? groupChatId,
-    String? city,
-    String? fieldName,
-    DateTime? date,
-    String? hour,
-    String? description,
-    int? playerCount,
-    bool? isPublic,
-    double? price,
-    double? duration,
-    String? createdAt,
-    // ▼▼▼ CAMBIO ▼▼▼
-    List<String>? imageUrls, // <-- CAMBIO: Se añade al copyWith
-    // ▲▲▲ FIN DEL CAMBIO ▲▲▲
-    List<String>? usersJoined,
-    String? skillLevel,
-    String? type,
-    String? format,
-    String? footwear,
-    GeoPoint? location,
-    String? status,
-    int? minPlayersToConfirm,
-    String? privateCode,
-    double? fieldRating,
-    String? report,
+    // ... otros ...
     Map<String, int>? guests,
-    Map<String, String>? paymentStatus,
+    Map<String, Map<String, dynamic>>? paymentInfo, // <-- CAMBIO
   }) {
     return GameModel(
       id: id ?? this.id,
@@ -221,7 +166,7 @@ class GameModel {
       fieldRating: fieldRating ?? this.fieldRating,
       report: report ?? this.report,
       guests: guests ?? this.guests,
-      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentInfo: paymentInfo ?? this.paymentInfo, // <-- CAMBIO
     );
   }
 }

@@ -29,6 +29,7 @@ class UserModel {
   final int ratingCount;
   final double ratingSum;
   final List<String> blockedUsers;
+  final double walletBalance;
 
   double get averageRating => (ratingCount > 0) ? ratingSum / ratingCount : 0.0;
 
@@ -57,6 +58,7 @@ class UserModel {
     required this.ratingCount,
     required this.ratingSum,
     required this.blockedUsers,
+    this.walletBalance = 0.0, // <-- NUEVO: Valor por defecto
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
@@ -85,6 +87,7 @@ class UserModel {
       ratingCount: map['ratingCount'] ?? 0,
       ratingSum: (map['ratingSum'] ?? 0.0).toDouble(),
       blockedUsers: List<String>.from(map['blockedUsers'] ?? []),
+      walletBalance: (map['walletBalance'] ?? 0.0).toDouble(), // <-- NUEVO: Lectura desde Firestore
     );
   }
 
@@ -94,10 +97,7 @@ class UserModel {
       'username': username,
       'email': email,
       'phone': phone,
-      // ▼▼▼ ¡CORRECCIÓN #2: GUARDAR EN EL CAMPO CORRECTO! ▼▼▼
-      // Al guardar, usamos el nombre 'profileImage' para mantener la consistencia en la BD.
       'profileImage': profileImageUrl,
-      // ▲▲▲ FIN DE LA CORRECCIÓN ▲▲▲
       'isVerified': isVerified,
       'blocked': blocked,
       'banReason': banReason,
@@ -116,10 +116,10 @@ class UserModel {
       'ratingCount': ratingCount,
       'ratingSum': ratingSum,
       'blockedUsers': blockedUsers,
+      'walletBalance': walletBalance, // <-- NUEVO: Escritura a Firestore
     };
   }
 
-  // El método copyWith no necesita cambios, ya que trabaja con las propiedades del objeto, no con el mapa.
   UserModel copyWith({
     String? uid,
     String? fullName,
@@ -145,6 +145,7 @@ class UserModel {
     int? ratingCount,
     double? ratingSum,
     List<String>? blockedUsers,
+    double? walletBalance, // <-- NUEVO
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -171,17 +172,18 @@ class UserModel {
       ratingCount: ratingCount ?? this.ratingCount,
       ratingSum: ratingSum ?? this.ratingSum,
       blockedUsers: blockedUsers ?? this.blockedUsers,
+      walletBalance: walletBalance ?? this.walletBalance, // <-- NUEVO
     );
   }
 }
 
-
+// El resto del archivo (VerificationData) no necesita cambios.
 @immutable
 class VerificationData {
-  // CAMPOS ACTUALIZADOS
+  // ... sin cambios ...
   final String idCardFrontUrl;
-  final String idCardBackUrl;     // URL de la parte trasera
-  final String faceWithIdUrl;     // URL de la selfie con el documento
+  final String idCardBackUrl;
+  final String faceWithIdUrl;
   final String status;
   final String? rejectionReason;
 
