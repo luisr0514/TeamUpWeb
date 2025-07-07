@@ -53,8 +53,6 @@ class _PagosState extends State<Pagos> {
 
       if (approve) {
         await _gameService.approvePayment(payment.gameId, payment.userId);
-        await _notificationService.sendPaymentConfirmedNotification(
-            toUserId: payment.userId, gameId: game.id, gameDescription: game.description);
         scaffoldMessenger.showSnackBar(const SnackBar(
             content: Text('Pago aprobado con éxito.'), backgroundColor: Colors.green));
       } else {

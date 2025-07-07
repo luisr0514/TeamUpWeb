@@ -3,6 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:teamup_web/models/game_model.dart';
+import 'package:teamup_web/services/notification_service.dart';
 
 /// Servicio para gestionar las operaciones y la lógica de negocio de los partidos
 /// desde el panel de administración.
@@ -10,6 +11,7 @@ class GameService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // Es una buena práctica tipar la referencia de la colección.
   final CollectionReference<Map<String, dynamic>> _gamesCollection;
+  final NotificationService _notificationService = NotificationService();
 
   GameService() : _gamesCollection = FirebaseFirestore.instance.collection('games');
 
@@ -43,23 +45,33 @@ class GameService {
 
   // --- MÉTODOS DE ACCIÓN PARA EL ADMINISTRADOR ---
 
-  /// Aprueba el pago de un jugador específico en un partido.
-  /// Actualiza el estado a 'approved' dentro del mapa 'paymentInfo'.
   Future<void> approvePayment(String gameId, String userId) async {
     try {
-      // CORRECCIÓN: La ruta correcta para actualizar un campo anidado en un mapa.
-      final String fieldPath = 'paymentInfo.$userId.status';
+      // 1. Obtener los datos del partido para usarlos en la notificación
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('No se pudo encontrar el partido para enviar la notificación.');
+      }
 
+      // 2. Actualizar el estado del pago en Firestore
+      final String fieldPath = 'paymentInfo.$userId.status';
       await _gamesCollection.doc(gameId).update({
-        fieldPath: 'approved', // Se establece el estado a 'approved'.
+        fieldPath: 'approved',
       });
 
       if (kDebugMode) {
         print("✅ Pago APROBADO para el usuario $userId en el partido $gameId.");
       }
 
-      // Aquí podrías llamar al NotificationService para notificar al usuario.
-      // await _notificationService.sendPaymentConfirmedNotification(...);
+      await _notificationService.sendPaymentConfirmedNotification(
+        toUserId: userId,
+        gameId: gameId,
+        gameDescription: game.description,
+      );
+
+      if (kDebugMode) {
+        print("📬 Notificación de pago confirmado enviada a $userId.");
+      }
 
     } catch (e) {
       if (kDebugMode) {
@@ -69,26 +81,39 @@ class GameService {
     }
   }
 
+  /// <-- EXTRA: También podemos conectar la notificación de RECHAZO
   /// Rechaza el pago de un jugador, marca su estado como 'rejected' y lo expulsa del partido.
-  Future<void> rejectPayment(String gameId, String userId) async {
+  Future<void> rejectPayment(String gameId, String userId, {String reason = 'No se pudo verificar el comprobante.'}) async {
     try {
-      final String fieldPath = 'paymentInfo.$userId.status';
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('No se pudo encontrar el partido para enviar la notificación.');
+      }
 
-      // Se realizan ambas operaciones en una sola actualización atómica.
+      final String fieldPath = 'paymentInfo.$userId.status';
       await _gamesCollection.doc(gameId).update({
-        fieldPath: 'rejected', // 1. Marca el pago como rechazado.
-        'usersJoined': FieldValue.arrayRemove([userId]), // 2. Elimina al usuario de la lista de unidos.
+        fieldPath: 'rejected',
+        'usersJoined': FieldValue.arrayRemove([userId]),
       });
 
       if (kDebugMode) {
         print("🗑️ Pago RECHAZADO y usuario $userId expulsado del partido $gameId.");
       }
 
-      // OPCIONAL: Actualizar el estado general del partido (e.g., de 'full' a 'confirmed').
-      final game = await getGame(gameId);
-      if (game != null) {
-        await updateGameStatus(game);
+      // <-- CONEXIÓN: Enviar notificación de rechazo
+      await _notificationService.sendPaymentRejectedNotification(
+        toUserId: userId,
+        gameId: gameId,
+        gameDescription: game.description,
+        reason: reason, // Aquí podrías permitir al admin escribir un motivo
+      );
+
+      if (kDebugMode) {
+        print("📬 Notificación de pago rechazado enviada a $userId.");
       }
+
+      await updateGameStatus(game);
+
     } catch (e) {
       if (kDebugMode) {
         print("❌ Error al rechazar el pago y expulsar al usuario $userId: $e");

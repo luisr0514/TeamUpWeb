@@ -1,3 +1,5 @@
+// lib/widgets/field_form_dialog.dart
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -50,14 +52,13 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
   final _surfaceTypes = ['Césped Sintético', 'Césped Natural', 'Cemento'];
   final _formats = ['5vs5', '7vs7', '11vs11'];
   final _footwears = ['Cualquiera', 'Micro', 'Suela Lisa'];
-  final _durations = [1.0, 1.5, 2.0];
+  final _durations = [1.0, 1.5, 2.0]; // <-- AHORA SÍ SE USA
 
   @override
   void initState() {
     super.initState();
     final data = widget.initialData ?? {};
 
-    // Inicialización de Controllers
     _nameCtrl        = TextEditingController(text: data['name'] ?? '');
     _zoneCtrl        = TextEditingController(text: data['zone'] ?? '');
     _latCtrl         = TextEditingController(text: data['lat']?.toString() ?? '');
@@ -69,7 +70,6 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     _discountCtrl    = TextEditingController(text: data['discountPercentage']?.toString() ?? '');
     _minPlayersCtrl  = TextEditingController(text: data['minPlayersToBook']?.toString() ?? '');
 
-    // Inicialización de otras variables de estado
     _selectedCity     = data['city'];
     _selectedSurface  = data['surfaceType'];
     _selectedFormat   = data['format'];
@@ -79,7 +79,6 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
     _isActive         = data['isActive'] ?? true;
     _existingImageUrls = List<String>.from(data['imageUrls'] ?? []);
 
-    // Inicialización del mapa de disponibilidad
     final availabilityData = data['availability'] as Map?;
     _availability = availabilityData?.map(
           (k, v) => MapEntry(k.toString(), List<String>.from(v ?? [])),
@@ -164,7 +163,7 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
   }
 
   Future<void> _selectOnMap() async {
-    double lat = double.tryParse(_latCtrl.text) ?? -34.6037; // Default a Buenos Aires si está vacío
+    double lat = double.tryParse(_latCtrl.text) ?? -34.6037;
     double lng = double.tryParse(_lngCtrl.text) ?? -58.3816;
     LatLng picked = LatLng(lat, lng);
 
@@ -203,11 +202,11 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          // Botón para agregar nuevas imágenes
           GestureDetector(
             onTap: () async {
               final imgs = await _picker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
-              if (imgs == null || imgs.isEmpty) return;
+              // <-- CORRECCIÓN 3: `pickMultiImage` devuelve lista vacía, no null.
+              if (imgs.isEmpty) return;
 
               if (kIsWeb) {
                 for (final f in imgs) {
@@ -225,9 +224,7 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
               child: const Icon(Icons.add_a_photo, size: 32, color: Colors.grey),
             ),
           ),
-          // Imágenes existentes
           ..._existingImageUrls.map((url) => _buildExistingImage(url)),
-          // Vistas previas de nuevas imágenes
           if (kIsWeb) ..._pickedBytes.map((bytes) => _buildNewImagePreview(Image.memory(bytes, fit: BoxFit.cover), () => setState(() => _pickedBytes.remove(bytes))))
           else ..._pickedFiles.map((file) => _buildNewImagePreview(Image.file(File(file.path), fit: BoxFit.cover), () => setState(() => _pickedFiles.remove(file)))),
         ],
@@ -287,9 +284,23 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
                 builder: (ctx, snap) {
                   if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                   final docs = snap.data!.docs;
+
+                  final cityItems = docs.map((d) {
+                    final cityName = (d.data() as Map<String, dynamic>)['name'] ?? d.id;
+                    // <-- CORRECCIÓN 1: Especificar el tipo <String> explícitamente.
+                    return DropdownMenuItem<String>(
+                        value: cityName,
+                        child: Text(cityName)
+                    );
+                  }).toList();
+
+                  if (_selectedCity != null && !cityItems.any((item) => item.value == _selectedCity)) {
+                    _selectedCity = null;
+                  }
+
                   return DropdownButtonFormField<String>(
                     value: _selectedCity,
-                    items: docs.map((d) => DropdownMenuItem(value: d.id, child: Text((d.data() as Map<String, dynamic>)['name'] ?? d.id))).toList(),
+                    items: cityItems,
                     onChanged: (v) => setState(() => _selectedCity = v),
                     decoration: const InputDecoration(labelText: 'Selecciona ciudad', border: OutlineInputBorder()),
                     validator: (v) => v == null ? 'Debes escoger una ciudad' : null,
@@ -315,6 +326,19 @@ class _FieldFormDialogState extends State<FieldFormDialog> {
               DropdownButtonFormField<String>(value: _selectedSurface, items: _surfaceTypes.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(), onChanged: (v) => setState(() => _selectedSurface = v), decoration: const InputDecoration(labelText: 'Superficie', border: OutlineInputBorder()), validator: (v) => v == null ? 'Selecciona una superficie' : null),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(value: _selectedFootwear, items: _footwears.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(), onChanged: (v) => setState(() => _selectedFootwear = v), decoration: const InputDecoration(labelText: 'Calzado Permitido', border: OutlineInputBorder())),
+              const SizedBox(height: 12), // <-- AÑADIDO
+
+              // <-- CORRECCIÓN 2: Añadido el Dropdown para la duración.
+              DropdownButtonFormField<double>(
+                  value: _selectedDuration,
+                  items: _durations.map((d) => DropdownMenuItem(
+                      value: d,
+                      child: Text('$d hs')
+                  )).toList(),
+                  onChanged: (v) => setState(() => _selectedDuration = v),
+                  decoration: const InputDecoration(labelText: 'Duración por turno', border: OutlineInputBorder()),
+                  validator: (v) => v == null ? 'Selecciona una duración' : null
+              ),
 
               _sectionTitle('Disponibilidad y Horarios'),
               AvailabilityEditor(

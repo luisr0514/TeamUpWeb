@@ -1,10 +1,9 @@
-// lib/widget_home_page/manage_games/manage_games_page.dart (ACTUALIZADO CON IMAGEN DE COMPROBANTE)
+// lib/widget_home_page/manage_games/manage_games_page.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:teamup_web/models/game_model.dart';
-// <-- CAMBIO: Importamos el modelo de notificación para usarlo
 import 'package:teamup_web/models/payment_notification_model.dart';
 import 'package:teamup_web/models/user_model.dart';
 import 'package:teamup_web/services/game_service.dart';
@@ -28,13 +27,10 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
         return GameModel.fromMap(data);
       }).toList());
 
-  final _dateTimeFmt = DateFormat('dd/MM/yyyy HH:mm');
-  final _dateOnlyFmt = DateFormat('dd/MM/yyyy');
+  final _dateTimeFmt = DateFormat('dd/MM/yyyy HH:mm', 'es_ES');
+  final _dateOnlyFmt = DateFormat('dd/MM/yyyy', 'es_ES');
   final _paymentDateFmt = DateFormat("dd 'de' MMMM 'de' yyyy, hh:mm a", 'es_ES');
 
-  // --- MÉTODOS DE LA UI ---
-
-  // ... (build, _buildFilterBar, _buildGameCard no necesitan cambios) ...
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,7 +157,7 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: ListTile(
                     leading: const Icon(Icons.group_add_outlined),
-                    title: Text(entry.key),
+                    title: Text("Invitado de ${entry.key}"), // Mejor texto
                     trailing: Text('+${entry.value} persona(s)'),
                   ),
                 ))
@@ -173,9 +169,6 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     );
   }
 
-
-  // --- CAMBIOS PRINCIPALES AQUÍ ---
-
   Widget _buildPlayerTile(GameModel game, String uid) {
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
@@ -186,38 +179,51 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
 
         final user = snapU.hasData
             ? UserModel.fromMap(snapU.data!.data() as Map<String, dynamic>, snapU.data!.id)
-            : UserModel(uid: uid, fullName: 'Usuario no encontrado', email: 'N/A', username: 'N/A', phone: '', profileImageUrl: '', isVerified: false, blocked: false, reports: 0, totalGamesCreated: 0, totalGamesJoined: 0, position: '', skillLevel: '', notesByAdmin: '', friends: [], friendRequestsSent: [], friendRequestsReceived: [], ratingCount: 0, ratingSum: 0, blockedUsers: []);
+            : UserModel.empty(uid); // Usar un constructor `empty` es más limpio
 
         final paymentData = game.paymentInfo[uid];
 
         if (paymentData == null) {
           return Card(
-            // ... (código para jugador sin pago registrado, sin cambios)
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              color: Colors.blueGrey.shade50,
+              child: ListTile(
+                leading: CircleAvatar(
+                    backgroundImage: user.profileImageUrl.isNotEmpty ? NetworkImage(user.profileImageUrl) : null,
+                    child: user.profileImageUrl.isEmpty ? const Icon(Icons.person) : null),
+                title: Text(user.fullName),
+                subtitle: const Text("Sin pago registrado (gratis o pendiente)"),
+              )
           );
         }
 
         final status = paymentData['status'] as String? ?? 'pending';
         final amount = (paymentData['amount'] as num? ?? 0.0).toDouble();
-        final paidAt = (paymentData['paidAt'] as Timestamp?)?.toDate();
-        // <-- CAMBIO: Obtenemos el ID de la notificación para buscar la imagen
+
+        // CORRECCIÓN: Manejar tanto Timestamp como String para la fecha
+        DateTime? paidAtDate;
+        dynamic paidAtValue = paymentData['paymentTimestamp'] ?? paymentData['paidAt'];
+        if (paidAtValue is Timestamp) {
+          paidAtDate = paidAtValue.toDate();
+        }
+
         final notificationId = paymentData['notificationId'] as String?;
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4),
+          color: status == 'pending' ? Colors.yellow.shade50 : Colors.white,
           child: ListTile(
             leading: CircleAvatar(
                 backgroundImage: user.profileImageUrl.isNotEmpty ? NetworkImage(user.profileImageUrl) : null,
                 child: user.profileImageUrl.isEmpty ? const Icon(Icons.person) : null),
             title: Text(user.fullName),
-            // <-- CAMBIO: El subtítulo ahora es una columna para organizar mejor la información
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SelectableText('Email: ${user.email}'),
                 Text('Monto: \$${amount.toStringAsFixed(2)}'),
-                if (paidAt != null) Text('Fecha de pago: ${_paymentDateFmt.format(paidAt)}'),
+                if (paidAtDate != null) Text('Fecha de pago: ${_paymentDateFmt.format(paidAtDate)}'),
 
-                // <-- NUEVO: FutureBuilder para buscar y mostrar los detalles del pago (imagen y método)
                 if (notificationId != null)
                   FutureBuilder<PaymentNotificationModel?>(
                     future: _fetchPaymentNotification(notificationId),
@@ -226,7 +232,7 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
                         return const Padding(padding: EdgeInsets.all(8.0), child: Text('Cargando comprobante...'));
                       }
                       if (!snapP.hasData || snapP.data == null) {
-                        return const SizedBox.shrink(); // No mostrar nada si no se encuentra
+                        return const SizedBox.shrink();
                       }
                       final paymentDetails = snapP.data!;
                       return Padding(
@@ -257,7 +263,7 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
                   ),
               ],
             ),
-            isThreeLine: false, // El tamaño se ajusta por la columna del subtítulo
+            isThreeLine: true, // Para dar más espacio vertical
             trailing: status == 'pending'
                 ? Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(icon: const Icon(Icons.check_circle, color: Colors.green, size: 28), tooltip: 'Aprobar Pago', onPressed: () => _approvePayment(game.id, uid)),
@@ -274,9 +280,6 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     );
   }
 
-  // --- MÉTODOS AUXILIARES ---
-
-  // <-- NUEVO: Función para buscar la notificación de pago por su ID
   Future<PaymentNotificationModel?> _fetchPaymentNotification(String notificationId) async {
     try {
       final doc = await FirebaseFirestore.instance.collection('payment_notifications').doc(notificationId).get();
@@ -289,7 +292,6 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     return null;
   }
 
-  // <-- NUEVO: Función para mostrar la imagen del comprobante en un diálogo
   void _showImageDialog(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -305,18 +307,17 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
     );
   }
 
-  // ... (Las funciones _approvePayment, _rejectPayment y _showConfirmDialog no cambian)
   Future<void> _approvePayment(String gameId, String userId) async {
     final ok = await _showConfirmDialog(
       title: '¿Aprobar pago?',
-      content: 'Esto confirmará el pago del usuario y actualizará su estado en el partido.',
+      content: 'Esto confirmará el pago del usuario, actualizará su estado y le enviará una notificación.',
       confirmText: 'Aprobar',
       confirmColor: Colors.green,
     );
     if (ok != true || !mounted) return;
     try {
       await _gameService.approvePayment(gameId, userId);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Pago aprobado con éxito.'), backgroundColor: Colors.green));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Pago aprobado y notificación enviada.'), backgroundColor: Colors.green));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error al aprobar: $e'), backgroundColor: Colors.red));
@@ -326,14 +327,16 @@ class _ManageGamesPageState extends State<ManageGamesPage> {
   Future<void> _rejectPayment(String gameId, String userId) async {
     final ok = await _showConfirmDialog(
       title: '¿Rechazar pago?',
-      content: 'Esto rechazará el pago y expulsará al jugador del partido.',
+      content: 'Esto rechazará el pago, expulsará al jugador y le enviará una notificación.',
       confirmText: 'Rechazar y expulsar',
       confirmColor: Colors.orange,
     );
     if (ok != true || !mounted) return;
     try {
-      await _gameService.rejectPayment(gameId, userId);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🗑️ Pago rechazado y jugador expulsado.'), backgroundColor: Colors.orange));
+      // <-- CLAVE: LLamada actualizada al servicio
+      await _gameService.rejectPayment(gameId, userId, reason: 'El comprobante no es válido o no se pudo verificar.');
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🗑️ Pago rechazado, jugador expulsado y notificación enviada.'), backgroundColor: Colors.orange));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error al rechazar: $e'), backgroundColor: Colors.red));

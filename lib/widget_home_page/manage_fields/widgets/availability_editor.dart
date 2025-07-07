@@ -1,3 +1,5 @@
+// lib/widgets/availability_editor.dart
+
 import 'package:flutter/material.dart';
 
 class AvailabilityEditor extends StatefulWidget {
@@ -72,14 +74,23 @@ class _AvailabilityEditorState extends State<AvailabilityEditor> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Seleccionar Día'),
-        content: DropdownButton<String>(
-          hint: const Text("Elige un día"),
-          isExpanded: true,
-          items: availableDays.map((day) => DropdownMenuItem(value: day, child: Text(day))).toList(),
-          onChanged: (selectedDay) {
-            dayToAdd = selectedDay;
+        // <-- INICIO DE LA CORRECCIÓN
+        content: StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialogState) {
+            return DropdownButton<String>(
+              value: dayToAdd,
+              hint: const Text("Elige un día"),
+              isExpanded: true,
+              items: availableDays.map((day) => DropdownMenuItem(value: day, child: Text(day))).toList(),
+              onChanged: (selectedDay) {
+                setDialogState(() {
+                  dayToAdd = selectedDay;
+                });
+              },
+            );
           },
         ),
+        // <-- FIN DE LA CORRECCIÓN
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           ElevatedButton(onPressed: (){
@@ -98,10 +109,7 @@ class _AvailabilityEditorState extends State<AvailabilityEditor> {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos las claves del mapa para el orden actual
     List<String> sortedDays = _availability.keys.toList();
-    // Opcional: si quieres un orden fijo (Lun, Mar, etc)
-    // sortedDays.sort((a, b) => _daysOfWeek.indexOf(a).compareTo(_daysOfWeek.indexOf(b)));
 
     return Container(
       padding: const EdgeInsets.all(8.0),

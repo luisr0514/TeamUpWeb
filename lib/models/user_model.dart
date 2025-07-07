@@ -58,8 +58,36 @@ class UserModel {
     required this.ratingCount,
     required this.ratingSum,
     required this.blockedUsers,
-    this.walletBalance = 0.0, // <-- NUEVO: Valor por defecto
+    this.walletBalance = 0.0,
   });
+
+  // <-- CLAVE: AÑADE ESTE CONSTRUCTOR FACTORY
+  /// Crea una instancia vacía de UserModel, útil para valores por defecto.
+  factory UserModel.empty(String uid) {
+    return UserModel(
+      uid: uid,
+      fullName: 'Usuario Desconocido',
+      username: 'usuario_eliminado',
+      email: 'N/A',
+      phone: 'N/A',
+      profileImageUrl: '',
+      isVerified: false,
+      blocked: true, // Marcar como bloqueado para evitar interacciones
+      reports: 0,
+      totalGamesCreated: 0,
+      totalGamesJoined: 0,
+      position: 'N/A',
+      skillLevel: 'N/A',
+      notesByAdmin: 'Este usuario ya no existe en la base de datos.',
+      friends: [],
+      friendRequestsSent: [],
+      friendRequestsReceived: [],
+      ratingCount: 0,
+      ratingSum: 0.0,
+      blockedUsers: [],
+      walletBalance: 0.0,
+    );
+  }
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
     return UserModel(
@@ -87,7 +115,7 @@ class UserModel {
       ratingCount: map['ratingCount'] ?? 0,
       ratingSum: (map['ratingSum'] ?? 0.0).toDouble(),
       blockedUsers: List<String>.from(map['blockedUsers'] ?? []),
-      walletBalance: (map['walletBalance'] ?? 0.0).toDouble(), // <-- NUEVO: Lectura desde Firestore
+      walletBalance: (map['walletBalance'] ?? 0.0).toDouble(),
     );
   }
 
@@ -116,7 +144,7 @@ class UserModel {
       'ratingCount': ratingCount,
       'ratingSum': ratingSum,
       'blockedUsers': blockedUsers,
-      'walletBalance': walletBalance, // <-- NUEVO: Escritura a Firestore
+      'walletBalance': walletBalance,
     };
   }
 
@@ -145,7 +173,7 @@ class UserModel {
     int? ratingCount,
     double? ratingSum,
     List<String>? blockedUsers,
-    double? walletBalance, // <-- NUEVO
+    double? walletBalance,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -172,10 +200,11 @@ class UserModel {
       ratingCount: ratingCount ?? this.ratingCount,
       ratingSum: ratingSum ?? this.ratingSum,
       blockedUsers: blockedUsers ?? this.blockedUsers,
-      walletBalance: walletBalance ?? this.walletBalance, // <-- NUEVO
+      walletBalance: walletBalance ?? this.walletBalance,
     );
   }
 }
+
 
 // El resto del archivo (VerificationData) no necesita cambios.
 @immutable
