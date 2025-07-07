@@ -16,33 +16,32 @@ class FieldList extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          print(snapshot.error); // For debugging
           return const Center(child: Text('Error al cargar canchas'));
         }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
           return const Center(child: Text('No hay canchas registradas.'));
         }
 
-        final filteredFields = snapshot.data!.docs.where((field) {
-          final name = (field.data() as Map<String, dynamic>)['name']
+        final filtered = docs.where((d) {
+          final name = (d.data() as Map<String, dynamic>)['name']
               ?.toString()
               .toLowerCase() ??
               '';
           return name.contains(searchText);
         }).toList();
 
-        if (filteredFields.isEmpty) {
+        if (filtered.isEmpty) {
           return const Center(child: Text('No se encontraron canchas.'));
         }
 
         return ListView.builder(
-          itemCount: filteredFields.length,
-          itemBuilder: (context, index) {
-            final fieldDoc = filteredFields[index];
-            // Delegamos la construcción de la tarjeta a su propio widget
+          itemCount: filtered.length,
+          itemBuilder: (context, i) {
+            final d = filtered[i];
             return FieldCard(
-              docId: fieldDoc.id,
-              fieldData: fieldDoc.data() as Map<String, dynamic>,
+              docId: d.id,
+              fieldData: d.data() as Map<String, dynamic>,
             );
           },
         );

@@ -1,19 +1,19 @@
+// lib/models/payment_notification_model.dart - CORREGIDO
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Representa un registro de una notificación de pago.
-/// Este objeto contiene todos los detalles que un administrador necesita para verificar un pago.
 class PaymentNotificationModel {
-  final String notificationId;
+  final String notificationId; // Este ahora será el ID real del documento
   final String gameId;
   final String userId;
   final String userEmail;
   final String method;
   final String reference;
   final double amount;
-  final String status; // 'pending', 'approved', 'rejected'
+  final String status;
   final DateTime createdAt;
   final int guestsCount;
-  final String? receiptUrl; // La URL de la imagen del comprobante (opcional)
+  final String? receiptUrl;
 
   PaymentNotificationModel({
     required this.notificationId,
@@ -29,10 +29,12 @@ class PaymentNotificationModel {
     this.receiptUrl,
   });
 
-  /// Crea una instancia del modelo desde un documento de Firestore.
-  factory PaymentNotificationModel.fromMap(Map<String, dynamic> map) {
+  // ▼▼▼ CAMBIO PRINCIPAL: Este es el método que soluciona el error ▼▼▼
+  /// Crea una instancia del modelo desde un DocumentSnapshot de Firestore.
+  factory PaymentNotificationModel.fromFirestore(DocumentSnapshot doc) {
+    final map = doc.data() as Map<String, dynamic>;
     return PaymentNotificationModel(
-      notificationId: map['notificationId'] ?? '',
+      notificationId: doc.id, // Obtenemos el ID directamente del documento
       gameId: map['gameId'] ?? '',
       userId: map['userId'] ?? '',
       userEmail: map['userEmail'] ?? '',
@@ -49,7 +51,7 @@ class PaymentNotificationModel {
   /// Convierte la instancia del modelo a un mapa para guardarlo en Firestore.
   Map<String, dynamic> toMap() {
     return {
-      'notificationId': notificationId,
+      // Ya no guardamos 'notificationId' en el mapa, es redundante.
       'gameId': gameId,
       'userId': userId,
       'userEmail': userEmail,

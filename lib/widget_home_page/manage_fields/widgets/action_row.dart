@@ -16,7 +16,6 @@ class ActionRow extends StatelessWidget {
       children: [
         _buildSearchField(),
         const SizedBox(width: 16),
-        const SizedBox(width: 16),
         _buildAddFieldButton(),
       ],
     );
@@ -42,29 +41,6 @@ class ActionRow extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(String title, Color backgroundColor) {
-    return Container(
-      width: 133,
-      height: 41,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Center(
-        child: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildAddFieldButton() {
     return GestureDetector(
       onTap: onAddField,
@@ -75,7 +51,7 @@ class ActionRow extends StatelessWidget {
           color: const Color.fromARGB(255, 125, 176, 64),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Center( 
+        child: const Center(
           child: Text(
             'Agregar cancha',
             style: TextStyle(
@@ -83,8 +59,8 @@ class ActionRow extends StatelessWidget {
               fontSize: 16,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w500,
-              ),
             ),
+          ),
         ),
       ),
     );

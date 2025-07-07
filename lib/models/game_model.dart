@@ -8,7 +8,7 @@ class GameModel {
   final String id;
   final String ownerId;
   final String groupChatId;
-  final String zone;
+  final String city;
   final String fieldName;
   final DateTime date;
   final String hour;
@@ -18,7 +18,12 @@ class GameModel {
   final double price;
   final double duration;
   final String createdAt;
-  final String imageUrl;
+
+  // ▼▼▼ CAMBIO PRINCIPAL ▼▼▼
+  /// Lista de URLs de las imágenes del partido para la galería.
+  final List<String> imageUrls;
+  // ▲▲▲ FIN DEL CAMBIO ▲▲▲
+
   final String skillLevel;
   final String type;
   final String format;
@@ -39,7 +44,6 @@ class GameModel {
   /// Ejemplo: {'uid_de_carlos': 2} significa que Carlos trae a 2 invitados.
   final Map<String, int> guests;
 
-  // ▼▼▼ CAMBIO PRINCIPAL ▼▼▼
   /// Mapa para rastrear el estado del pago de cada usuario.
   /// Clave: UID del usuario.
   /// Valor: Estado del pago ('pending', 'paid', 'rejected').
@@ -50,7 +54,7 @@ class GameModel {
     required this.id,
     required this.ownerId,
     required this.groupChatId,
-    required this.zone,
+    required this.city,
     required this.fieldName,
     required this.date,
     required this.hour,
@@ -60,7 +64,7 @@ class GameModel {
     required this.price,
     required this.duration,
     required this.createdAt,
-    required this.imageUrl,
+    required this.imageUrls, // <-- CAMBIO: Se usa la lista de URLs
     required this.usersJoined,
     required this.skillLevel,
     required this.type,
@@ -73,7 +77,7 @@ class GameModel {
     this.fieldRating,
     this.report,
     required this.guests,
-    required this.paymentStatus, // <-- CAMBIO: Añadido al constructor
+    required this.paymentStatus,
   });
 
   /// Getter para calcular el número total de plazas ocupadas.
@@ -93,7 +97,7 @@ class GameModel {
       id: map['id'] ?? '',
       ownerId: map['ownerId'] ?? '',
       groupChatId: map['groupChatId'] ?? '',
-      zone: map['zone'] ?? '',
+      city: map['city'] ?? '',
       fieldName: map['fieldName'] ?? '',
       date: parseDate(map['date']),
       hour: map['hour'] ?? '',
@@ -103,7 +107,10 @@ class GameModel {
       price: (map['price'] ?? 0.0).toDouble(),
       duration: (map['duration'] ?? 1.0).toDouble(),
       createdAt: map['createdAt'] ?? '',
-      imageUrl: map['imageUrl'] ?? '',
+      // ▼▼▼ CAMBIO ▼▼▼
+      // Parsea la lista de URLs. Si no existe o no es una lista, devuelve una lista vacía.
+      imageUrls: List<String>.from(map['imageUrls'] ?? []),
+      // ▲▲▲ FIN DEL CAMBIO ▲▲▲
       usersJoined: List<String>.from(map['usersJoined'] ?? []),
       skillLevel: map['skillLevel'] ?? '',
       type: map['type'] ?? '',
@@ -126,7 +133,7 @@ class GameModel {
       'id': id,
       'ownerId': ownerId,
       'groupChatId': groupChatId,
-      'zone': zone,
+      'city': city,
       'fieldName': fieldName,
       'date': Timestamp.fromDate(date),
       'hour': hour,
@@ -136,7 +143,9 @@ class GameModel {
       'price': price,
       'duration': duration,
       'createdAt': createdAt,
-      'imageUrl': imageUrl,
+      // ▼▼▼ CAMBIO ▼▼▼
+      'imageUrls': imageUrls, // <-- CAMBIO: Se añade la lista al mapa
+      // ▲▲▲ FIN DEL CAMBIO ▲▲▲
       'usersJoined': usersJoined,
       'skillLevel': skillLevel,
       'type': type,
@@ -149,8 +158,7 @@ class GameModel {
       'fieldRating': fieldRating,
       'report': report,
       'guests': guests,
-      // ▼▼▼ CAMBIO ▼▼▼
-      'paymentStatus': paymentStatus, // <-- CAMBIO: Añadido al mapa
+      'paymentStatus': paymentStatus,
     };
   }
 
@@ -159,7 +167,7 @@ class GameModel {
     String? id,
     String? ownerId,
     String? groupChatId,
-    String? zone,
+    String? city,
     String? fieldName,
     DateTime? date,
     String? hour,
@@ -169,7 +177,9 @@ class GameModel {
     double? price,
     double? duration,
     String? createdAt,
-    String? imageUrl,
+    // ▼▼▼ CAMBIO ▼▼▼
+    List<String>? imageUrls, // <-- CAMBIO: Se añade al copyWith
+    // ▲▲▲ FIN DEL CAMBIO ▲▲▲
     List<String>? usersJoined,
     String? skillLevel,
     String? type,
@@ -182,13 +192,13 @@ class GameModel {
     double? fieldRating,
     String? report,
     Map<String, int>? guests,
-    Map<String, String>? paymentStatus, // <-- CAMBIO: Añadido al copyWith
+    Map<String, String>? paymentStatus,
   }) {
     return GameModel(
       id: id ?? this.id,
       ownerId: ownerId ?? this.ownerId,
       groupChatId: groupChatId ?? this.groupChatId,
-      zone: zone ?? this.zone,
+      city: city ?? this.city,
       fieldName: fieldName ?? this.fieldName,
       date: date ?? this.date,
       hour: hour ?? this.hour,
@@ -198,7 +208,7 @@ class GameModel {
       price: price ?? this.price,
       duration: duration ?? this.duration,
       createdAt: createdAt ?? this.createdAt,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
       usersJoined: usersJoined ?? this.usersJoined,
       skillLevel: skillLevel ?? this.skillLevel,
       type: type ?? this.type,
@@ -211,7 +221,7 @@ class GameModel {
       fieldRating: fieldRating ?? this.fieldRating,
       report: report ?? this.report,
       guests: guests ?? this.guests,
-      paymentStatus: paymentStatus ?? this.paymentStatus, // <-- CAMBIO: Añadido al copyWith
+      paymentStatus: paymentStatus ?? this.paymentStatus,
     );
   }
 }

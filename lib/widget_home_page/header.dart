@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class Header extends StatelessWidget {
   final String adminEmail; // Campo para el correo del administrador
@@ -29,9 +30,13 @@ class Header extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          const CircleAvatar(
-            radius: 20,
-            backgroundImage: NetworkImage("https://placehold.co/40x40"),
+          CircleAvatar(
+            backgroundColor: Colors.transparent,
+            child: SvgPicture.network(
+              'https://placehold.co/40x40',
+              width: 40,
+              height: 40,
+            ),
           ),
           const SizedBox(width: 16),
           Column(

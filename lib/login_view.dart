@@ -1,7 +1,8 @@
+// login_view.dart - ACTUALIZADO
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teamup_web/auth/auth_service.dart';
-
 import 'reset_password_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -31,10 +32,12 @@ class _LoginViewState extends State<LoginView> {
     String? password = prefs.getString('password');
     bool? remember = prefs.getBool('rememberMe');
 
-    if (remember == true) {
-      emailController.text = email ?? '';
-      passwordController.text = password ?? '';
-      rememberMe = true;
+    if (remember == true && mounted) {
+      setState(() {
+        emailController.text = email ?? '';
+        passwordController.text = password ?? '';
+        rememberMe = true;
+      });
     }
   }
 
@@ -43,6 +46,7 @@ class _LoginViewState extends State<LoginView> {
     final password = passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor completa todos los campos')),
       );
@@ -53,29 +57,33 @@ class _LoginViewState extends State<LoginView> {
 
     try {
       AuthService authService = AuthService();
+      bool success = false;
 
       if (isLogin) {
-        await authService.singIn(email, password);
-        if (rememberMe) {
-          _saveCredentials(email, password);
-        } else {
-          _clearCredentials();
-        }
-        Navigator.pushReplacementNamed(context, '/VistaAdmin');
+        final user = await authService.singIn(email, password);
+        if (user != null) success = true;
       } else {
-        await authService.register(email, password);
-        await authService.singIn(email, password);
+        final user = await authService.register(email, password);
+        if (user != null) success = true;
+      }
+
+      if(success) {
         if (rememberMe) {
-          _saveCredentials(email, password);
+          await _saveCredentials(email, password);
         } else {
-          _clearCredentials();
+          await _clearCredentials();
         }
+        if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/VistaAdmin');
       }
+
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -101,6 +109,8 @@ class _LoginViewState extends State<LoginView> {
     });
   }
 
+  // (El resto del código de la clase LoginView permanece igual hasta el método build)
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,7 +128,7 @@ class _LoginViewState extends State<LoginView> {
                     children: [
                       Image.asset("assets/logo.jpg", width: 361),
                       const SizedBox(height: 20),
-                      Text(
+                      const Text(
                         'TeamUp',
                         style: TextStyle(
                           fontSize: 48,
@@ -126,7 +136,7 @@ class _LoginViewState extends State<LoginView> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Let´s play',
                         style: TextStyle(fontSize: 32, fontFamily: 'Sansation'),
                       ),
@@ -199,8 +209,14 @@ class _LoginViewState extends State<LoginView> {
                               setState(() => rememberMe = v ?? false);
                             },
                           ),
-                          const Text('Remember me'),
-                          const Spacer(),
+                          // <-- CAMBIO CLAVE: Envuelve el Text en Expanded.
+                          // Esto le dice al texto que ocupe el espacio flexible sobrante,
+                          // evitando que empuje al botón de 'Forgot password?'.
+                          const Expanded(
+                            child: Text('Remember me'),
+                          ),
+                          // Spacer ya no es necesario aquí si usamos Expanded
+                          // const Spacer(),
                           TextButton(
                             onPressed: () {
                               Navigator.push(
@@ -209,7 +225,7 @@ class _LoginViewState extends State<LoginView> {
                               );
                             },
                             child: const Text('Forgot password?'),
-                              ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -220,7 +236,7 @@ class _LoginViewState extends State<LoginView> {
                         ),
                         onPressed: isLoading ? null : handleAuth,
                         child: isLoading
-                            ? const CircularProgressIndicator()
+                            ? const CircularProgressIndicator(color: Colors.white)
                             : Text(isLogin ? 'Sign In' : 'Register'),
                       ),
                       const SizedBox(height: 20),
@@ -252,7 +268,6 @@ class _LoginViewState extends State<LoginView> {
       ),
     );
   }
-
   @override
   void dispose() {
     emailController.dispose();

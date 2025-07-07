@@ -35,34 +35,35 @@ class _ManageFieldsPageState extends State<ManageFieldsPage> {
   void _showAddFieldDialog() {
     showDialog(
       context: context,
-      builder: (context) => const FieldFormDialog(),
+      builder: (context) => FieldFormDialog(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              children: [
-                // Widget especializado para la fila de acciones.
-                ActionRow(
-                  searchController: _searchController,
-                  onAddField: _showAddFieldDialog,
-                ),
-                const SizedBox(height: 24),
-                // Widget especializado para la lista de canchas.
-                Expanded(
-                  child: FieldList(searchText: _searchText),
-                ),
-              ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('Gestionar Canchas')),
+      body: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  ActionRow(
+                    searchController: _searchController,
+                    onAddField: _showAddFieldDialog,
+                  ),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: FieldList(searchText: _searchText),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

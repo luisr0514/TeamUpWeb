@@ -23,19 +23,16 @@ class FieldCard extends StatelessWidget {
   }
 
   Future<void> _deleteField(BuildContext context) async {
-    // Es buena práctica pedir confirmación
-    final bool? confirm = await showDialog(
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Confirmar Eliminación'),
-        content: Text('¿Estás seguro de que quieres eliminar la cancha "${fieldData['name']}"?'),
+        content: Text(
+            '¿Eliminar la cancha "${fieldData['name']}"? Esta acción es irreversible.'),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -56,61 +53,54 @@ class FieldCard extends StatelessWidget {
         side: BorderSide(color: Colors.grey[200]!),
       ),
       child: ExpansionTile(
-        leading: _buildFieldImage(fieldData['photoUrl']),
+        leading: _buildImage(fieldData['imageUrls']?.first),
         title: Text(
-          fieldData['name'] ?? 'Sin nombre',
+          fieldData['name'] ?? '—',
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        children: [_buildFieldDetails(context)],
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ciudad: ${fieldData['city'] ?? '—'}'),
+                Text('Tipo: ${fieldData['surfaceType'] ?? '—'}'),
+                Text(
+                    'Precio/hora: \$${(fieldData['pricePerHour'] ?? 0).toStringAsFixed(2)}'),
+                Text('Activa: ${(fieldData['isActive'] ?? false) ? "Sí" : "No"}'),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                        onPressed: () => _showEditDialog(context),
+                        child: const Text('EDITAR')),
+                    TextButton(
+                      onPressed: () => _deleteField(context),
+                      child: const Text('ELIMINAR',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )
+        ],
       ),
     );
   }
 
-  Widget _buildFieldImage(String? imageUrl) {
+  Widget _buildImage(String? url) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        imageUrl ?? '',
+      child: url != null && url.isNotEmpty
+          ? Image.network(url, width: 60, height: 60, fit: BoxFit.cover)
+          : Container(
         width: 60,
         height: 60,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          width: 60,
-          height: 60,
-          color: Colors.grey[300],
-          child: const Icon(Icons.broken_image, color: Colors.grey),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFieldDetails(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Zona: ${fieldData['zone'] ?? 'Sin zona'}'),
-          Text('Tipo de cancha: ${fieldData['type'] ?? 'Sin tipo'}'),
-          Text('Tipo de superficie: ${fieldData['surfaceType'] ?? 'Sin tipo'}'),
-          Text('Precio por hora: \$${(fieldData['pricePerHour'] ?? 0).toStringAsFixed(2)}'),
-          Text('Verificada: ${(fieldData['isVerified'] ?? false) ? "Sí" : "No"}'),
-          Text('Activa: ${(fieldData['isActive'] ?? false) ? "Sí" : "No"}'),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () => _showEditDialog(context),
-                child: const Text('EDITAR'),
-              ),
-              TextButton(
-                onPressed: () => _deleteField(context),
-                child: const Text('ELIMINAR', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        ],
+        color: Colors.grey[300],
+        child: const Icon(Icons.image, color: Colors.white54),
       ),
     );
   }

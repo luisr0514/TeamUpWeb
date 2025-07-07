@@ -4,7 +4,7 @@ import 'widget_home_page/sidebar.dart';
 import 'widget_home_page/header.dart';
 import 'widget_home_page/manage_games/manage_games_page.dart';
 import 'widget_home_page/manage_fields/manage_fields_page.dart';
-import 'widget_home_page/users_page.dart';
+import 'widget_home_page/user/users_page.dart';
 import 'widget_home_page/settings_page.dart';
 import 'widget_home_page/table.dart';
 import 'widget_home_page/dashboard.dart';

@@ -1,3 +1,5 @@
+// lib/features/auth/models/user_model.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -64,7 +66,7 @@ class UserModel {
       username: map['username'] ?? '',
       email: map['email'] ?? '',
       phone: map['phone'] ?? '',
-      profileImageUrl: map['profileImageUrl'] ?? '',
+      profileImageUrl: map['profileImage'] ?? '',
       isVerified: map['isVerified'] ?? false,
       blocked: map['blocked'] ?? false,
       banReason: map['banReason'],
@@ -92,7 +94,10 @@ class UserModel {
       'username': username,
       'email': email,
       'phone': phone,
-      'profileImageUrl': profileImageUrl,
+      // ▼▼▼ ¡CORRECCIÓN #2: GUARDAR EN EL CAMPO CORRECTO! ▼▼▼
+      // Al guardar, usamos el nombre 'profileImage' para mantener la consistencia en la BD.
+      'profileImage': profileImageUrl,
+      // ▲▲▲ FIN DE LA CORRECCIÓN ▲▲▲
       'isVerified': isVerified,
       'blocked': blocked,
       'banReason': banReason,
@@ -114,6 +119,7 @@ class UserModel {
     };
   }
 
+  // El método copyWith no necesita cambios, ya que trabaja con las propiedades del objeto, no con el mapa.
   UserModel copyWith({
     String? uid,
     String? fullName,
@@ -172,22 +178,26 @@ class UserModel {
 
 @immutable
 class VerificationData {
-  final String idCardUrl;
-  final String faceImageUrl;
+  // CAMPOS ACTUALIZADOS
+  final String idCardFrontUrl;
+  final String idCardBackUrl;     // URL de la parte trasera
+  final String faceWithIdUrl;     // URL de la selfie con el documento
   final String status;
   final String? rejectionReason;
 
   const VerificationData({
-    required this.idCardUrl,
-    required this.faceImageUrl,
+    required this.idCardFrontUrl,
+    required this.idCardBackUrl,
+    required this.faceWithIdUrl,
     required this.status,
     this.rejectionReason,
   });
 
   factory VerificationData.fromMap(Map<String, dynamic> map) {
     return VerificationData(
-      idCardUrl: map['idCardUrl'] ?? '',
-      faceImageUrl: map['faceImageUrl'] ?? '',
+      idCardFrontUrl: map['idCardFrontUrl'] ?? '',
+      idCardBackUrl: map['idCardBackUrl'] ?? '',
+      faceWithIdUrl: map['faceWithIdUrl'] ?? '',
       status: map['status'] ?? 'pending',
       rejectionReason: map['rejectionReason'],
     );
@@ -195,8 +205,9 @@ class VerificationData {
 
   Map<String, dynamic> toMap() {
     return {
-      'idCardUrl': idCardUrl,
-      'faceImageUrl': faceImageUrl,
+      'idCardFrontUrl': idCardFrontUrl,
+      'idCardBackUrl': idCardBackUrl,
+      'faceWithIdUrl': faceWithIdUrl,
       'status': status,
       'rejectionReason': rejectionReason,
     };
